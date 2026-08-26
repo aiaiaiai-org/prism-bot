@@ -15,6 +15,7 @@ source = YAML.safe_load_file(source_path, aliases: false).fetch("source")
 actual_digest = Digest::SHA256.hexdigest(contract_source)
 raise "pinned Hub contract digest drift" unless source.fetch("sha256") == actual_digest
 raise "OpenAPI version drift" unless contract.fetch("openapi") == "3.1.0"
+raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.2"
 
 expected_operations = {
   ["/api/v1/channels", "get"] => "listChannels",
@@ -45,6 +46,18 @@ formats = contract.dig(
   "enum"
 )
 raise "post and story formats must remain explicit" unless %w[post story].all? { formats.include?(_1) }
+
+channel_required = contract.dig("components", "schemas", "Channel", "required")
+raise "Hub channels must declare capabilities" unless channel_required.include?("capabilities")
+
+channel_parameters = contract.dig("paths", "/api/v1/channels", "get", "parameters")
+parameter_refs = channel_parameters.map { |parameter| parameter.fetch("$ref") }
+unless %w[#/components/parameters/PageCursor #/components/parameters/PageLimit].all? { |ref| parameter_refs.include?(ref) }
+  raise "generated client contract must expose channel cursor pagination"
+end
+
+error_required = contract.dig("components", "schemas", "ErrorResponse", "required")
+raise "Hub errors must carry request_id" unless error_required.include?("request_id")
 
 generator = File.join(root, "script/generate_hub_client")
 abort "generated Hub client is stale" unless system(RbConfig.ruby, generator, "--check")

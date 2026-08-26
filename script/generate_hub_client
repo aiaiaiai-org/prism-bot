@@ -48,8 +48,10 @@ template = <<~'RUBY'
           @transport = transport
         end
 
-        def list_channels
-          request("GET", LIST_CHANNELS_PATH)
+        def list_channels(limit: 100, cursor: nil)
+          parameters = {"limit" => limit}
+          parameters["cursor"] = cursor if cursor
+          request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
         end
 
         def publish_publication(payload:, idempotency_key:)
@@ -97,7 +99,8 @@ template = <<~'RUBY'
           raise HubError.new(
             error.fetch("code", "bot.hub.request_failed"),
             error.fetch("message", "Prism Hub rejected the request"),
-            http_status: response.status
+            http_status: response.status,
+            request_id: parsed["request_id"] || response.headers&.fetch("x-request-id", nil)
           )
         end
 

@@ -3,7 +3,7 @@
 module PrismBot
   module Adapters
     class NetHttpTransport
-      Response = Struct.new(:status, :body, keyword_init: true)
+      Response = Struct.new(:status, :body, :headers, keyword_init: true)
 
       def initialize(
         allow_insecure_http: false,
@@ -31,8 +31,10 @@ module PrismBot
 
         response_body = +""
         status = nil
+        response_headers = nil
         http(uri).request(request) do |response|
           status = response.code.to_i
+          response_headers = response.each_header.to_h.transform_values(&:freeze).freeze
           response.read_body do |chunk|
             if response_body.bytesize + chunk.bytesize > @max_response_bytes
               raise TransportError.new(
@@ -43,7 +45,11 @@ module PrismBot
             response_body << chunk
           end
         end
-        Response.new(status: status, body: response_body.freeze).freeze
+        Response.new(
+          status: status,
+          body: response_body.freeze,
+          headers: response_headers
+        ).freeze
       rescue URI::InvalidURIError
         raise ConfigurationError.new("bot.http.url.invalid", "upstream URL is invalid")
       rescue Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError

@@ -8,6 +8,7 @@
 - Stable publication idempotency keys based on Telegram update IDs.
 - Immutable provider-neutral publication aggregate.
 - Generated Prism Hub v1 client pinned to an exact source commit and SHA-256.
+- Bounded channel pagination, capability validation, and correlated Hub errors.
 - Tests and Full CI gates for syntax, style, behavior, dependencies,
   architecture, contracts, copyright, and lockfile drift.
 

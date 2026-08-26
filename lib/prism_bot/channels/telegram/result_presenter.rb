@@ -29,7 +29,11 @@ module PrismBot
             id = channel.fetch("id")
             label = channel.fetch("label")
             provider = channel.fetch("provider_id")
-            "• #{id} — #{label} (#{provider})"
+            capabilities = channel.fetch("capabilities")
+            formats = capabilities.fetch("formats").join(", ")
+            content = capabilities.fetch("media_kinds").dup
+            content.unshift("text") if capabilities.fetch("text")
+            "• #{id} — #{label} (#{provider}; формати: #{formats}; контент: #{content.join(', ')})"
           end
           (["Доступні канали:"] + lines).join("\n")
         rescue KeyError, TypeError
@@ -58,7 +62,8 @@ module PrismBot
           when InputError
             "Команду не виконано: #{error.message}"
           when HubError
-            "Hub відхилив запит (#{error.code}). Перевірте /channels або журнал Hub."
+            reference = error.request_id ? " Запит: #{error.request_id}." : ""
+            "Hub відхилив запит (#{error.code}).#{reference} Перевірте /channels або журнал Hub."
           when TransportError
             "Сервіс тимчасово недоступний (#{error.code}). Спробуйте пізніше."
           else

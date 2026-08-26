@@ -55,10 +55,11 @@ module PrismBotTestSupport
   class FakeTransport
     attr_reader :calls
 
-    def initialize(status: 200, body: "{}")
+    def initialize(status: 200, body: "{}", headers: {})
       @response = PrismBot::Adapters::NetHttpTransport::Response.new(
         status: status,
-        body: body
+        body: body,
+        headers: headers
       )
       @calls = []
     end
