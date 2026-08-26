@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+# © 2026 aiaiaiai · aiaiaiai.org
+
+require "pathname"
+
+root = Pathname.new(__dir__).join("..").expand_path
+violations = []
+
+forbidden = {
+  "lib/prism_bot/domain/**/*.rb" => %w[Adapters Channels ENV Net::HTTP Rack],
+  "lib/prism_bot/use_cases/**/*.rb" => %w[Adapters Channels ENV JSON Net::HTTP Rack],
+  "lib/prism_bot/ports/**/*.rb" => %w[Adapters Channels ENV JSON Net::HTTP Rack]
+}
+
+forbidden.each do |pattern, constants|
+  Dir.glob(root.join(pattern)).sort.each do |path|
+    source = File.read(path)
+    constants.each do |constant|
+      if source.match?(/\b#{Regexp.escape(constant)}\b/)
+        relative = Pathname.new(path).relative_path_from(root)
+        violations << "#{relative} depends on #{constant}"
+      end
+    end
+  end
+end
+
+handlers = Dir.glob(root.join("lib/prism_bot/channels/**/handlers/*.rb")).map do |path|
+  File.read(path)
+end.join("\n")
+%w[credential_ref channel_ref instagram meta threads].each do |provider_detail|
+  if handlers.match?(/#{Regexp.escape(provider_detail)}/i)
+    violations << "channel handler contains provider detail #{provider_detail}"
+  end
+end
+
+abort violations.join("\n") if violations.any?
+
+puts "architecture boundaries are valid"

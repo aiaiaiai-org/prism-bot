@@ -1,0 +1,11 @@
+# © 2026 aiaiaiai · aiaiaiai.org
+
+/.bundle
+/.env
+/.env.*
+!/.env.example
+/coverage
+/pkg
+/tmp/*
+!/tmp/.keep
+/vendor/bundle

@@ -1,0 +1,44 @@
+# © 2026 aiaiaiai · aiaiaiai.org
+
+require "digest"
+require "json"
+require "logger"
+require "net/http"
+require "openssl"
+require "socket"
+require "timeout"
+require "uri"
+require "rack"
+
+require_relative "prism_bot/version"
+require_relative "prism_bot/error"
+require_relative "prism_bot/configuration"
+
+require_relative "prism_bot/domain/publication"
+
+require_relative "prism_bot/ports/channel_catalog"
+require_relative "prism_bot/ports/message_sender"
+require_relative "prism_bot/ports/publication_publisher"
+
+require_relative "prism_bot/use_cases/list_channels"
+require_relative "prism_bot/use_cases/publish_publication"
+
+require_relative "prism_bot/generated/prism_hub_v1_client"
+require_relative "prism_bot/adapters/net_http_transport"
+require_relative "prism_bot/adapters/hub_gateway"
+require_relative "prism_bot/adapters/telegram/bot_api_client"
+
+require_relative "prism_bot/channels/telegram/update"
+require_relative "prism_bot/channels/telegram/update_parser"
+require_relative "prism_bot/channels/telegram/authorization_policy"
+require_relative "prism_bot/channels/telegram/publish_arguments"
+require_relative "prism_bot/channels/telegram/result_presenter"
+require_relative "prism_bot/channels/telegram/handlers/help"
+require_relative "prism_bot/channels/telegram/handlers/unknown"
+require_relative "prism_bot/channels/telegram/handlers/channels"
+require_relative "prism_bot/channels/telegram/handlers/publish"
+require_relative "prism_bot/channels/telegram/command_router"
+require_relative "prism_bot/channels/telegram/webhook_secret"
+require_relative "prism_bot/channels/telegram/webhook_app"
+
+require_relative "prism_bot/bootstrap"
