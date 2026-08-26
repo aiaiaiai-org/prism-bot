@@ -1,0 +1,64 @@
+# © 2026 aiaiaiai · aiaiaiai.org
+
+name: Full CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  correctness:
+    name: Correctness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Check Ruby syntax
+        run: git ls-files -z '*.rb' 'script/*' | xargs -0 -n1 ruby -c
+
+      - name: Check formatting and style
+        run: bundle exec rubocop
+
+      - name: Run tests
+        run: bundle exec rake test
+
+      - name: Audit dependencies
+        run: bundle exec bundle-audit check --update
+
+      - name: Check architecture and contracts
+        run: bundle exec rake check
+
+      - name: Normalize Linux lockfile platform
+        run: bundle lock --add-platform x86_64-linux
+
+      - name: Upload resolved lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prism-bot-gemfile-lock-${{ github.sha }}
+          path: Gemfile.lock
+          if-no-files-found: error
+
+      - name: Require a committed deterministic lockfile
+        run: test -z "$(git status --porcelain -- Gemfile.lock)"

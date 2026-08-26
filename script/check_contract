@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+# © 2026 aiaiaiai · aiaiaiai.org
+
+require "digest"
+require "rbconfig"
+require "yaml"
+
+root = File.expand_path("..", __dir__)
+contract_path = File.join(root, "contracts/prism-hub.v1.openapi.yaml")
+source_path = File.join(root, "contracts/prism-hub.v1.source.yaml")
+contract_source = File.read(contract_path)
+contract = YAML.safe_load(contract_source, aliases: false)
+source = YAML.safe_load_file(source_path, aliases: false).fetch("source")
+
+actual_digest = Digest::SHA256.hexdigest(contract_source)
+raise "pinned Hub contract digest drift" unless source.fetch("sha256") == actual_digest
+raise "OpenAPI version drift" unless contract.fetch("openapi") == "3.1.0"
+
+expected_operations = {
+  ["/api/v1/channels", "get"] => "listChannels",
+  ["/api/v1/publications/validate", "post"] => "validatePublication",
+  ["/api/v1/publications", "post"] => "publishPublication"
+}
+expected_operations.each do |(route, method), operation_id|
+  actual = contract.dig("paths", route, method, "operationId")
+  raise "missing #{method.upcase} #{route} operation" unless actual == operation_id
+end
+
+target_properties = contract.dig(
+  "components",
+  "schemas",
+  "PublicationTarget",
+  "properties"
+).keys.sort
+unless target_properties == %w[channel_id id selection]
+  raise "PublicationTarget must expose only public Hub targeting fields"
+end
+
+formats = contract.dig(
+  "components",
+  "schemas",
+  "ContentVariant",
+  "properties",
+  "format",
+  "enum"
+)
+raise "post and story formats must remain explicit" unless %w[post story].all? { formats.include?(_1) }
+
+generator = File.join(root, "script/generate_hub_client")
+abort "generated Hub client is stale" unless system(RbConfig.ruby, generator, "--check")
+
+puts "pinned Hub contract and generated client are valid"
