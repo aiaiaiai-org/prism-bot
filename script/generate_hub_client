@@ -43,7 +43,7 @@ template = <<~'RUBY'
             )
           end
 
-          @base_url = String(base_url).sub(%r{/+\z}, "").freeze
+          @base_url = String(base_url).sub(%%r{/+\z}, "").freeze
           @token = token.dup.freeze
           @transport = transport
         end
