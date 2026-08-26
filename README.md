@@ -8,6 +8,7 @@ This foundation provides:
 
 - a reusable Ruby gem and Rack application;
 - a generated, pinned Prism Hub `v1` client;
+- bounded traversal of Hub channel pages with validated publishing capabilities;
 - deny-by-default Telegram user/chat authorization;
 - verified Telegram webhook ingress and a focused Bot API sender adapter;
 - extensible command routing with `/help`, `/channels`, and text-only
@@ -35,7 +36,7 @@ application policy.
 ## Commands
 
 - `/help` or `/start` — show the supported command syntax;
-- `/channels` — list channels configured by Hub;
+- `/channels` — list configured channels and their declared formats/content;
 - `/publish text` — publish a text post to configured default channels;
 - `/publish [channel-a,channel-b] text` — select explicit Hub channel IDs.
 
@@ -77,6 +78,9 @@ bundle exec rake check
 
 The Hub contract is pinned in `contracts/prism-hub.v1.source.yaml`. Generated
 code is never edited by hand; `script/generate_hub_client --check` proves drift.
+The adapter follows opaque Hub cursors with a fixed page limit, rejects repeated
+cursors or malformed capabilities, and retains Hub `request_id` values on typed
+errors without exposing upstream private messages.
 
 The normative ecosystem rules live in Prism's
 [`engineering-principles.md`](https://github.com/aiaiaiai-org/prism/blob/master/docs/engineering-principles.md).

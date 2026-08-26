@@ -25,6 +25,7 @@ require_relative "prism_bot/use_cases/publish_publication"
 
 require_relative "prism_bot/generated/prism_hub_v1_client"
 require_relative "prism_bot/adapters/net_http_transport"
+require_relative "prism_bot/adapters/hub_channel_page"
 require_relative "prism_bot/adapters/hub_gateway"
 require_relative "prism_bot/adapters/telegram/bot_api_client"
 

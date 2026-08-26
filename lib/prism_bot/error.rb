@@ -16,11 +16,12 @@ module PrismBot
   class MessageDeliveryError < TransportError; end
 
   class HubError < Error
-    attr_reader :http_status
+    attr_reader :http_status, :request_id
 
-    def initialize(code, message, http_status:)
+    def initialize(code, message, http_status:, request_id: nil)
       super(code, message)
       @http_status = http_status
+      @request_id = request_id&.dup&.freeze
     end
   end
 end

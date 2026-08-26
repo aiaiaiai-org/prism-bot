@@ -42,5 +42,8 @@ the publication boundary.
 
 The bot never receives provider credentials and targets only public Hub channel
 IDs. The generated client is derived from a byte-for-byte pinned OpenAPI file.
+The Hub adapter owns cursor traversal and validates every page before channel
+metadata crosses the port; Telegram presentation only consumes that public,
+provider-neutral capability view.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

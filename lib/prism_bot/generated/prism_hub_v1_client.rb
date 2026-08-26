@@ -4,7 +4,7 @@
 module PrismBot
   module Generated
     class PrismHubV1Client
-      CONTRACT_SHA256 = "5fb85eea28b8eeae566ef6a70cd2d1cb5a9725783cf7e23cc2cd165577240dde"
+      CONTRACT_SHA256 = "37dde9edbb750b7be4c77025978194bbbf3f516f1d19fdd121d81b9acd9a94cb"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       PUBLISH_PUBLICATION_PATH = "/api/v1/publications"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
@@ -22,8 +22,10 @@ module PrismBot
         @transport = transport
       end
 
-      def list_channels
-        request("GET", LIST_CHANNELS_PATH)
+      def list_channels(limit: 100, cursor: nil)
+        parameters = {"limit" => limit}
+        parameters["cursor"] = cursor if cursor
+        request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
       end
 
       def publish_publication(payload:, idempotency_key:)
@@ -71,7 +73,8 @@ module PrismBot
         raise HubError.new(
           error.fetch("code", "bot.hub.request_failed"),
           error.fetch("message", "Prism Hub rejected the request"),
-          http_status: response.status
+          http_status: response.status,
+          request_id: parsed["request_id"] || response.headers&.fetch("x-request-id", nil)
         )
       end
 
