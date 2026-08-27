@@ -4,11 +4,11 @@ module PrismBot
   class Configuration
     TRUE_VALUES = %w[1 true yes].freeze
     FALSE_VALUES = %w[0 false no].freeze
+    LEGACY_USER_ALLOWLIST = "PRISM_BOT_TELEGRAM_ALLOWED_USER_IDS".freeze
 
     attr_reader :instance_id,
       :telegram_token,
       :telegram_webhook_secret,
-      :allowed_user_ids,
       :allowed_chat_ids,
       :default_channel_ids,
       :default_locale,
@@ -20,13 +20,13 @@ module PrismBot
       :allow_insecure_http
 
     def initialize(environment)
+      reject_legacy_user_allowlist!(environment)
       @instance_id = required(environment, "PRISM_BOT_INSTANCE_ID")
       @telegram_token = required(environment, "PRISM_BOT_TELEGRAM_TOKEN")
       @telegram_webhook_secret = required(
         environment,
         "PRISM_BOT_TELEGRAM_WEBHOOK_SECRET"
       )
-      @allowed_user_ids = integer_array(environment, "PRISM_BOT_TELEGRAM_ALLOWED_USER_IDS")
       @allowed_chat_ids = integer_array(environment, "PRISM_BOT_TELEGRAM_ALLOWED_CHAT_IDS")
       @default_channel_ids = string_array(environment, "PRISM_BOT_DEFAULT_CHANNEL_IDS")
       @default_locale = environment.fetch("PRISM_BOT_DEFAULT_LOCALE", "uk-UA").strip.freeze
@@ -49,6 +49,15 @@ module PrismBot
     end
 
     private
+
+    def reject_legacy_user_allowlist!(environment)
+      return unless environment.key?(LEGACY_USER_ALLOWLIST)
+
+      raise ConfigurationError.new(
+        "bot.configuration.telegram_user_allowlist.deprecated",
+        "Telegram users are authorized through Prism Hub identity bindings; remove #{LEGACY_USER_ALLOWLIST}"
+      )
+    end
 
     def required(environment, name)
       value = String(environment.fetch(name)).strip

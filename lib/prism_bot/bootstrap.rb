@@ -37,9 +37,11 @@ module PrismBot
           configuration.telegram_webhook_secret
         ),
         update_parser: Channels::Telegram::UpdateParser.new,
-        authorization_policy: Channels::Telegram::AuthorizationPolicy.new(
-          allowed_user_ids: configuration.allowed_user_ids,
+        context_policy: Channels::Telegram::ContextPolicy.new(
           allowed_chat_ids: configuration.allowed_chat_ids
+        ),
+        actor_authorizer: Channels::Telegram::ActorAuthorizer.new(
+          resolve_actor: UseCases::ResolveActor.new(actor_resolver: hub_gateway)
         ),
         command_router: router,
         message_sender: message_sender,
