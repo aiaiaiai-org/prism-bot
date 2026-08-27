@@ -12,7 +12,8 @@ module PrismBot
         def initialize(
           secret:,
           update_parser:,
-          authorization_policy:,
+          context_policy:,
+          actor_authorizer:,
           command_router:,
           message_sender:,
           presenter:,
@@ -21,7 +22,8 @@ module PrismBot
         )
           @secret = secret
           @update_parser = update_parser
-          @authorization_policy = authorization_policy
+          @context_policy = context_policy
+          @actor_authorizer = actor_authorizer
           @command_router = command_router
           @message_sender = message_sender
           @presenter = presenter
@@ -73,12 +75,18 @@ module PrismBot
           update = @update_parser.call(value)
           return accepted unless update
 
-          unless @authorization_policy.allowed?(update)
-            @logger.warn("telegram_webhook unauthorized_actor")
+          unless @context_policy.allowed?(update)
+            @logger.warn("telegram_webhook context_denied")
             return accepted
           end
 
-          @command_router.call(update)
+          authorized_update = @actor_authorizer.call(update)
+          unless authorized_update
+            @logger.warn("telegram_webhook actor_not_authorized")
+            return accepted
+          end
+
+          @command_router.call(authorized_update)
           accepted
         rescue JSON::ParserError
           response(400, "status" => "error", "error" => {"code" => "bot.json.invalid"})
@@ -87,11 +95,11 @@ module PrismBot
           accepted
         rescue Error => error
           @logger.warn("telegram_webhook handled_error code=#{error.code}")
-          safely_notify(update, @presenter.error(error)) if update
+          safely_notify(authorized_update, @presenter.error(error)) if authorized_update
           accepted
         rescue StandardError => error
           @logger.error("telegram_webhook unexpected_error class=#{error.class.name}")
-          safely_notify(update, @presenter.error(error)) if update
+          safely_notify(authorized_update, @presenter.error(error)) if authorized_update
           accepted
         end
 
