@@ -14,14 +14,17 @@ require_relative "prism_bot/version"
 require_relative "prism_bot/error"
 require_relative "prism_bot/configuration"
 
+require_relative "prism_bot/domain/human_actor"
 require_relative "prism_bot/domain/publication"
 
+require_relative "prism_bot/ports/actor_resolver"
 require_relative "prism_bot/ports/channel_catalog"
 require_relative "prism_bot/ports/message_sender"
 require_relative "prism_bot/ports/publication_publisher"
 
 require_relative "prism_bot/use_cases/list_channels"
 require_relative "prism_bot/use_cases/publish_publication"
+require_relative "prism_bot/use_cases/resolve_actor"
 
 require_relative "prism_bot/generated/prism_hub_v1_client"
 require_relative "prism_bot/adapters/net_http_transport"
@@ -31,7 +34,9 @@ require_relative "prism_bot/adapters/telegram/bot_api_client"
 
 require_relative "prism_bot/channels/telegram/update"
 require_relative "prism_bot/channels/telegram/update_parser"
-require_relative "prism_bot/channels/telegram/authorization_policy"
+require_relative "prism_bot/channels/telegram/context_policy"
+require_relative "prism_bot/channels/telegram/authorized_update"
+require_relative "prism_bot/channels/telegram/actor_authorizer"
 require_relative "prism_bot/channels/telegram/publish_arguments"
 require_relative "prism_bot/channels/telegram/result_presenter"
 require_relative "prism_bot/channels/telegram/handlers/help"

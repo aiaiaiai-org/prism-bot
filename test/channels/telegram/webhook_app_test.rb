@@ -15,24 +15,65 @@ class WebhookAppTest < Minitest::Test
     assert_empty router.updates
   end
 
+  def test_acknowledges_context_denial_without_resolving_actor
+    router = RecordingRouter.new
+    resolver = FakeActorResolver.new
+    app = webhook_app(
+      router: router,
+      actor_resolver: resolver,
+      allowed_chat_ids: [-2002]
+    )
+
+    status, = app.call(webhook_environment(telegram_payload(chat_id: -1001)))
+
+    assert_equal 200, status
+    assert_empty resolver.requests
+    assert_empty router.updates
+  end
+
   def test_acknowledges_unauthorized_actor_without_dispatching
     router = RecordingRouter.new
-    app = webhook_app(router: router)
+    resolver = FakeActorResolver.new(denied_subject_ids: [999])
+    app = webhook_app(router: router, actor_resolver: resolver)
 
     status, = app.call(webhook_environment(telegram_payload(user_id: 999)))
 
     assert_equal 200, status
+    assert_equal "999", resolver.requests.fetch(0).fetch(:subject_id)
     assert_empty router.updates
   end
 
-  def test_dispatches_authorized_text_update
+  def test_dispatches_authorized_update_with_canonical_actor
     router = RecordingRouter.new
     app = webhook_app(router: router)
 
     status, = app.call(webhook_environment(telegram_payload(text: "/channels")))
 
     assert_equal 200, status
-    assert_equal "/channels", router.updates.fetch(0).text
+    authorized = router.updates.fetch(0)
+    assert_instance_of PrismBot::Channels::Telegram::AuthorizedUpdate, authorized
+    assert_equal "/channels", authorized.text
+    assert_equal "person:0x0sky", authorized.actor.canonical_ref
+    assert_equal "owner", authorized.actor.role
+  end
+
+  def test_does_not_message_an_unverified_actor_when_resolution_fails
+    sender = FakeMessageSender.new
+    resolver = FakeActorResolver.new(
+      error: PrismBot::HubError.new(
+        "hub.authorization.capability_denied",
+        "machine principal is misconfigured",
+        http_status: 403
+      )
+    )
+    router = RecordingRouter.new
+    app = webhook_app(router: router, sender: sender, actor_resolver: resolver)
+
+    status, = app.call(webhook_environment(telegram_payload))
+
+    assert_equal 200, status
+    assert_empty router.updates
+    assert_empty sender.messages
   end
 
   def test_acknowledges_handler_error_and_does_not_retry_publication

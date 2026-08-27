@@ -22,6 +22,38 @@ class PrismHubV1ClientTest < Minitest::Test
     )
   end
 
+  def test_sends_actor_evidence_without_publication_idempotency_header
+    transport = FakeTransport.new(
+      body: JSON.generate(
+        "actor" => {
+          "identity" => {"type" => "person", "id" => "0x0sky"},
+          "role" => "owner"
+        }
+      )
+    )
+    client = build_client(transport)
+
+    client.resolve_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    request = transport.calls.fetch(0)
+    assert_equal "POST", request.fetch(:method)
+    assert_equal "https://hub.example.test/api/v1/actors/resolve", request.fetch(:url)
+    assert_equal "application/json", request.fetch(:headers).fetch("content-type")
+    refute request.fetch(:headers).key?("idempotency-key")
+    assert_equal(
+      {
+        "provider" => "telegram",
+        "provider_scope" => "global",
+        "subject_id" => "123456789"
+      },
+      JSON.parse(request.fetch(:body))
+    )
+  end
+
   def test_sends_pinned_publication_contract_with_idempotency_key
     transport = FakeTransport.new(
       body: JSON.generate("status" => "ok", "request_id" => "request-1")

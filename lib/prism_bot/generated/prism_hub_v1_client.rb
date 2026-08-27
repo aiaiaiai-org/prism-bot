@@ -4,9 +4,10 @@
 module PrismBot
   module Generated
     class PrismHubV1Client
-      CONTRACT_SHA256 = "37dde9edbb750b7be4c77025978194bbbf3f516f1d19fdd121d81b9acd9a94cb"
+      CONTRACT_SHA256 = "f392eaa606ba412f3a2813c7424fd2b2c3922e7cf9f18aaed2bb4b9749fd914b"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       PUBLISH_PUBLICATION_PATH = "/api/v1/publications"
+      RESOLVE_ACTOR_PATH = "/api/v1/actors/resolve"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
 
       def initialize(base_url:, token:, transport:)
@@ -26,6 +27,18 @@ module PrismBot
         parameters = {"limit" => limit}
         parameters["cursor"] = cursor if cursor
         request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
+      end
+
+      def resolve_actor(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          RESOLVE_ACTOR_PATH,
+          payload: {
+            "provider" => provider,
+            "provider_scope" => provider_scope,
+            "subject_id" => subject_id
+          }
+        )
       end
 
       def publish_publication(payload:, idempotency_key:)
@@ -56,7 +69,7 @@ module PrismBot
         body = nil
         if payload
           headers["content-type"] = "application/json"
-          headers["idempotency-key"] = String(idempotency_key)
+          headers["idempotency-key"] = String(idempotency_key) if idempotency_key
           body = JSON.generate(payload)
         end
 

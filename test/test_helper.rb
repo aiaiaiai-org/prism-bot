@@ -9,13 +9,42 @@ require_relative "../lib/prism_bot"
 module PrismBotTestSupport
   WEBHOOK_SECRET = "test_webhook_secret_with_32_chars_minimum".freeze
 
+  class FakeActorResolver
+    include PrismBot::Ports::ActorResolver
+
+    attr_reader :requests
+
+    def initialize(actor: nil, denied_subject_ids: [], error: nil)
+      @actor = actor || PrismBot::Domain::HumanActor.new(
+        canonical_id: "0x0sky",
+        role: "owner"
+      )
+      @denied_subject_ids = denied_subject_ids.map(&:to_s).freeze
+      @error = error
+      @requests = []
+    end
+
+    def resolve_actor(provider:, provider_scope:, subject_id:)
+      @requests << {
+        provider: provider,
+        provider_scope: provider_scope,
+        subject_id: subject_id
+      }
+      raise @error if @error
+      return nil if @denied_subject_ids.include?(subject_id)
+
+      @actor
+    end
+  end
+
   class FakeHubGateway
+    include PrismBot::Ports::ActorResolver
     include PrismBot::Ports::ChannelCatalog
     include PrismBot::Ports::PublicationPublisher
 
     attr_reader :publications, :idempotency_keys
 
-    def initialize(channels: [], response: nil)
+    def initialize(channels: [], response: nil, actor: nil)
       @channels = channels
       @response = response || {
         "protocol_version" => "prism-execution.v1",
@@ -23,8 +52,16 @@ module PrismBotTestSupport
         "status" => "ok",
         "result" => {"type" => "execution", "data" => {"outcomes" => []}}
       }
+      @actor = actor || PrismBot::Domain::HumanActor.new(
+        canonical_id: "0x0sky",
+        role: "owner"
+      )
       @publications = []
       @idempotency_keys = []
+    end
+
+    def resolve_actor(provider:, provider_scope:, subject_id:)
+      @actor
     end
 
     def list
@@ -117,14 +154,24 @@ module PrismBotTestSupport
     )
   end
 
-  def webhook_app(router:, sender: FakeMessageSender.new, allowed_user_ids: [7], max_body_bytes: 1024)
+  def webhook_app(
+    router:,
+    sender: FakeMessageSender.new,
+    actor_resolver: FakeActorResolver.new,
+    allowed_chat_ids: [],
+    max_body_bytes: 1024
+  )
     logger = Logger.new(StringIO.new)
     PrismBot::Channels::Telegram::WebhookApp.new(
       secret: PrismBot::Channels::Telegram::WebhookSecret.new(WEBHOOK_SECRET),
       update_parser: PrismBot::Channels::Telegram::UpdateParser.new,
-      authorization_policy: PrismBot::Channels::Telegram::AuthorizationPolicy.new(
-        allowed_user_ids: allowed_user_ids,
-        allowed_chat_ids: []
+      context_policy: PrismBot::Channels::Telegram::ContextPolicy.new(
+        allowed_chat_ids: allowed_chat_ids
+      ),
+      actor_authorizer: PrismBot::Channels::Telegram::ActorAuthorizer.new(
+        resolve_actor: PrismBot::UseCases::ResolveActor.new(
+          actor_resolver: actor_resolver
+        )
       ),
       command_router: router,
       message_sender: sender,
