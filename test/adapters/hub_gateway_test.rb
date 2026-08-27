@@ -17,6 +17,113 @@ class HubGatewayTest < Minitest::Test
     end
   end
 
+  class ActorClient
+    attr_reader :calls
+
+    def initialize(response: nil, error: nil)
+      @response = response
+      @error = error
+      @calls = []
+    end
+
+    def resolve_actor(provider:, provider_scope:, subject_id:)
+      @calls << {
+        provider: provider,
+        provider_scope: provider_scope,
+        subject_id: subject_id
+      }
+      raise @error if @error
+
+      @response
+    end
+  end
+
+  def test_maps_hub_actor_response_to_provider_independent_human_actor
+    client = ActorClient.new(
+      response: {
+        "actor" => {
+          "identity" => {"type" => "person", "id" => "0x0sky"},
+          "role" => "owner"
+        }
+      }
+    )
+    gateway = PrismBot::Adapters::HubGateway.new(client: client)
+
+    actor = gateway.resolve_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    assert_equal "person:0x0sky", actor.canonical_ref
+    assert_equal "owner", actor.role
+    assert_equal(
+      [{provider: "telegram", provider_scope: "global", subject_id: "123456789"}],
+      client.calls
+    )
+  end
+
+  def test_collapses_only_hub_actor_not_authorized_to_nil
+    client = ActorClient.new(
+      error: PrismBot::HubError.new(
+        "hub.actor.not_authorized",
+        "actor is not authorized",
+        http_status: 403
+      )
+    )
+    gateway = PrismBot::Adapters::HubGateway.new(client: client)
+
+    assert_nil gateway.resolve_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "999"
+    )
+  end
+
+  def test_propagates_machine_capability_denial
+    error = PrismBot::HubError.new(
+      "hub.authorization.capability_denied",
+      "principal lacks actors:resolve",
+      http_status: 403
+    )
+    gateway = PrismBot::Adapters::HubGateway.new(
+      client: ActorClient.new(error: error)
+    )
+
+    raised = assert_raises(PrismBot::HubError) do
+      gateway.resolve_actor(
+        provider: "telegram",
+        provider_scope: "global",
+        subject_id: "7"
+      )
+    end
+
+    assert_same error, raised
+  end
+
+  def test_rejects_malformed_actor_disclosure
+    gateway = PrismBot::Adapters::HubGateway.new(
+      client: ActorClient.new(
+        response: {
+          "actor" => {
+            "identity" => {"type" => "service", "id" => "telegram-bot"},
+            "role" => "owner"
+          }
+        }
+      )
+    )
+
+    error = assert_raises(PrismBot::TransportError) do
+      gateway.resolve_actor(
+        provider: "telegram",
+        provider_scope: "global",
+        subject_id: "7"
+      )
+    end
+
+    assert_equal "bot.hub.actor.identity_type.invalid", error.code
+  end
+
   def test_collects_all_channel_pages
     client = PagedClient.new(
       [response("one", "cursor-1"), response("two", nil)]

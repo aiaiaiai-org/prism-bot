@@ -5,12 +5,44 @@ module PrismBot
     class HubGateway
       PAGE_LIMIT = 100
       MAX_PAGES = 100
+      ACTOR_NOT_AUTHORIZED = "hub.actor.not_authorized".freeze
 
+      include Ports::ActorResolver
       include Ports::ChannelCatalog
       include Ports::PublicationPublisher
 
       def initialize(client:)
         @client = client
+      end
+
+      def resolve_actor(provider:, provider_scope:, subject_id:)
+        response = @client.resolve_actor(
+          provider: provider,
+          provider_scope: provider_scope,
+          subject_id: subject_id
+        )
+        actor = response.fetch("actor")
+        identity = actor.fetch("identity")
+        unless identity.fetch("type") == "person"
+          raise TransportError.new(
+            "bot.hub.actor.identity_type.invalid",
+            "Prism Hub returned a non-human actor identity"
+          )
+        end
+
+        Domain::HumanActor.new(
+          canonical_id: identity.fetch("id"),
+          role: actor.fetch("role")
+        )
+      rescue HubError => error
+        return nil if error.http_status == 403 && error.code == ACTOR_NOT_AUTHORIZED
+
+        raise
+      rescue InputError, KeyError, TypeError
+        raise TransportError.new(
+          "bot.hub.actor.response.invalid",
+          "Prism Hub returned an invalid actor response"
+        )
       end
 
       def list
