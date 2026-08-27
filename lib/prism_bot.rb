@@ -14,14 +14,17 @@ require_relative "prism_bot/version"
 require_relative "prism_bot/error"
 require_relative "prism_bot/configuration"
 
+require_relative "prism_bot/domain/human_actor"
 require_relative "prism_bot/domain/publication"
 
+require_relative "prism_bot/ports/actor_resolver"
 require_relative "prism_bot/ports/channel_catalog"
 require_relative "prism_bot/ports/message_sender"
 require_relative "prism_bot/ports/publication_publisher"
 
 require_relative "prism_bot/use_cases/list_channels"
 require_relative "prism_bot/use_cases/publish_publication"
+require_relative "prism_bot/use_cases/resolve_actor"
 
 require_relative "prism_bot/generated/prism_hub_v1_client"
 require_relative "prism_bot/adapters/net_http_transport"

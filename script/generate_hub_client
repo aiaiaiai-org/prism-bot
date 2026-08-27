@@ -19,7 +19,7 @@ operations = contract.fetch("paths").each_with_object({}) do |(path, methods), v
   end
 end
 
-required = %w[listChannels publishPublication validatePublication]
+required = %w[listChannels publishPublication resolveActor validatePublication]
 missing = required - operations.keys
 abort "missing Hub operations: #{missing.join(', ')}" if missing.any?
 
@@ -33,6 +33,7 @@ template = <<~'RUBY'
         CONTRACT_SHA256 = "%<digest>s"
         LIST_CHANNELS_PATH = %<list_path>s
         PUBLISH_PUBLICATION_PATH = %<publish_path>s
+        RESOLVE_ACTOR_PATH = %<resolve_actor_path>s
         VALIDATE_PUBLICATION_PATH = %<validate_path>s
 
         def initialize(base_url:, token:, transport:)
@@ -52,6 +53,18 @@ template = <<~'RUBY'
           parameters = {"limit" => limit}
           parameters["cursor"] = cursor if cursor
           request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
+        end
+
+        def resolve_actor(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            RESOLVE_ACTOR_PATH,
+            payload: {
+              "provider" => provider,
+              "provider_scope" => provider_scope,
+              "subject_id" => subject_id
+            }
+          )
         end
 
         def publish_publication(payload:, idempotency_key:)
@@ -82,7 +95,7 @@ template = <<~'RUBY'
           body = nil
           if payload
             headers["content-type"] = "application/json"
-            headers["idempotency-key"] = String(idempotency_key)
+            headers["idempotency-key"] = String(idempotency_key) if idempotency_key
             body = JSON.generate(payload)
           end
 
@@ -125,6 +138,7 @@ generated = format(
   digest: Digest::SHA256.hexdigest(contract_source),
   list_path: operations.fetch("listChannels").inspect,
   publish_path: operations.fetch("publishPublication").inspect,
+  resolve_actor_path: operations.fetch("resolveActor").inspect,
   validate_path: operations.fetch("validatePublication").inspect
 )
 
