@@ -15,10 +15,12 @@ source = YAML.safe_load_file(source_path, aliases: false).fetch("source")
 actual_digest = Digest::SHA256.hexdigest(contract_source)
 raise "pinned Hub contract digest drift" unless source.fetch("sha256") == actual_digest
 raise "OpenAPI version drift" unless contract.fetch("openapi") == "3.1.0"
-raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.4"
+raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.7"
 
 expected_operations = {
   ["/api/v1/actors/resolve", "post"] => "resolveActor",
+  ["/api/v1/actors/onboard", "post"] => "onboardActor",
+  ["/api/v1/actors/personal/resolve", "post"] => "resolvePersonalActor",
   ["/api/v1/channels", "get"] => "listChannels",
   ["/api/v1/publications/validate", "post"] => "validatePublication",
   ["/api/v1/publications", "post"] => "publishPublication"
@@ -34,11 +36,19 @@ expected_operations.each do |(route, method), operation_id|
 end
 
 actor_request = contract.dig("components", "schemas", "ActorResolutionRequest")
-unless actor_request.fetch("required").sort == %w[provider provider_scope subject_id]
+unless actor_request.fetch("required").sort == %w[provider provider_scope subject_id workspace_id]
   raise "ActorResolutionRequest fields drift"
 end
 unless actor_request.dig("properties", "subject_id", "type") == "string"
   raise "actor subject_id must remain opaque string data"
+end
+
+onboarding_request = contract.dig("components", "schemas", "ActorOnboardingRequest")
+unless onboarding_request.fetch("required").sort == %w[provider provider_scope subject_id]
+  raise "ActorOnboardingRequest fields drift"
+end
+unless onboarding_request.dig("properties", "subject_id", "type") == "string"
+  raise "onboarding subject_id must remain opaque string data"
 end
 
 actor_response_properties = contract.dig(
@@ -53,11 +63,35 @@ unless resolved_actor_properties == %w[identity role]
   raise "resolved actor must expose only canonical identity and workspace role"
 end
 
+onboarding_response_properties = contract.dig(
+  "components", "schemas", "ActorOnboardingResponse", "properties"
+).keys.sort
+raise "personal actor response must expose only actor" unless onboarding_response_properties == ["actor"]
+
+onboarded_actor_properties = contract.dig(
+  "components", "schemas", "OnboardedActor", "properties"
+).keys.sort
+unless onboarded_actor_properties == %w[identity role workspace_id]
+  raise "personal actor must expose only canonical identity, workspace, and role"
+end
+
 identity_properties = contract.dig(
   "components", "schemas", "CanonicalIdentity", "properties"
 ).keys.sort
 unless identity_properties == %w[id type]
   raise "canonical actor identity disclosure drift"
+end
+
+%w[/api/v1/actors/onboard /api/v1/actors/personal/resolve].each do |route|
+  schema_ref = contract.dig(route == "/api/v1/actors/onboard" ? "paths" : "paths", route, "post", "requestBody", "content", "application/json", "schema", "$ref")
+  unless schema_ref == "#/components/schemas/ActorOnboardingRequest"
+    raise "#{route} must use ActorOnboardingRequest"
+  end
+
+  response_ref = contract.dig("paths", route, "post", "responses", "200", "content", "application/json", "schema", "$ref")
+  unless response_ref == "#/components/schemas/ActorOnboardingResponse"
+    raise "#{route} must use ActorOnboardingResponse"
+  end
 end
 
 target_properties = contract.dig(
