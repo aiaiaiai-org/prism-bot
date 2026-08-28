@@ -41,7 +41,8 @@ module PrismBot
           allowed_chat_ids: configuration.allowed_chat_ids
         ),
         actor_authorizer: Channels::Telegram::ActorAuthorizer.new(
-          resolve_actor: UseCases::ResolveActor.new(actor_resolver: hub_gateway)
+          resolve_actor: UseCases::ResolveActor.new(actor_resolver: hub_gateway),
+          onboard_actor: UseCases::OnboardActor.new(actor_onboarder: hub_gateway)
         ),
         command_router: router,
         message_sender: message_sender,
@@ -52,13 +53,15 @@ module PrismBot
     end
 
     def self.handlers(configuration:, hub_gateway:, message_sender:, presenter:)
-      help = Channels::Telegram::Handlers::Help.new(
-        message_sender: message_sender,
-        presenter: presenter
-      )
       {
-        "help" => help,
-        "start" => help,
+        "help" => Channels::Telegram::Handlers::Help.new(
+          message_sender: message_sender,
+          presenter: presenter
+        ),
+        "start" => Channels::Telegram::Handlers::Start.new(
+          message_sender: message_sender,
+          presenter: presenter
+        ),
         "channels" => Channels::Telegram::Handlers::Channels.new(
           list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
           message_sender: message_sender,
