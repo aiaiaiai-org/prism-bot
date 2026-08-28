@@ -14,6 +14,7 @@ module PrismBot
           update_parser:,
           context_policy:,
           actor_authorizer:,
+          lifecycle_gate:,
           command_router:,
           message_sender:,
           presenter:,
@@ -24,6 +25,7 @@ module PrismBot
           @update_parser = update_parser
           @context_policy = context_policy
           @actor_authorizer = actor_authorizer
+          @lifecycle_gate = lifecycle_gate
           @command_router = command_router
           @message_sender = message_sender
           @presenter = presenter
@@ -83,6 +85,13 @@ module PrismBot
           authorized_update = @actor_authorizer.call(update)
           unless authorized_update
             @logger.warn("telegram_webhook actor_not_authorized")
+            return accepted
+          end
+
+          blocked_state = @lifecycle_gate.call(authorized_update)
+          if blocked_state
+            @logger.info("telegram_webhook lifecycle_blocked status=#{blocked_state.status}")
+            safely_notify(authorized_update, @presenter.lifecycle_blocked(blocked_state))
             return accepted
           end
 
