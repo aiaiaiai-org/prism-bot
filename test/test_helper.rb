@@ -9,6 +9,32 @@ require_relative "../lib/prism_bot"
 module PrismBotTestSupport
   WEBHOOK_SECRET = "test_webhook_secret_with_32_chars_minimum".freeze
 
+  class FakeActorOnboarder
+    include PrismBot::Ports::ActorOnboarder
+
+    attr_reader :requests
+
+    def initialize(actor: nil, error: nil)
+      @actor = actor || PrismBot::Domain::HumanActor.new(
+        canonical_id: "0x0sky",
+        role: "owner"
+      )
+      @error = error
+      @requests = []
+    end
+
+    def onboard_actor(provider:, provider_scope:, subject_id:)
+      @requests << {
+        provider: provider,
+        provider_scope: provider_scope,
+        subject_id: subject_id
+      }
+      raise @error if @error
+
+      @actor
+    end
+  end
+
   class FakeActorResolver
     include PrismBot::Ports::ActorResolver
 
@@ -38,6 +64,7 @@ module PrismBotTestSupport
   end
 
   class FakeHubGateway
+    include PrismBot::Ports::ActorOnboarder
     include PrismBot::Ports::ActorResolver
     include PrismBot::Ports::ChannelCatalog
     include PrismBot::Ports::PublicationPublisher
@@ -58,6 +85,10 @@ module PrismBotTestSupport
       )
       @publications = []
       @idempotency_keys = []
+    end
+
+    def onboard_actor(**)
+      @actor
     end
 
     def resolve_actor(**)
@@ -158,6 +189,7 @@ module PrismBotTestSupport
     router:,
     sender: FakeMessageSender.new,
     actor_resolver: FakeActorResolver.new,
+    actor_onboarder: FakeActorOnboarder.new,
     allowed_chat_ids: [],
     max_body_bytes: 1024
   )
@@ -171,6 +203,9 @@ module PrismBotTestSupport
       actor_authorizer: PrismBot::Channels::Telegram::ActorAuthorizer.new(
         resolve_actor: PrismBot::UseCases::ResolveActor.new(
           actor_resolver: actor_resolver
+        ),
+        onboard_actor: PrismBot::UseCases::OnboardActor.new(
+          actor_onboarder: actor_onboarder
         )
       ),
       command_router: router,
