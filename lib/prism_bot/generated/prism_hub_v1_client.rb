@@ -4,10 +4,12 @@
 module PrismBot
   module Generated
     class PrismHubV1Client
-      CONTRACT_SHA256 = "f392eaa606ba412f3a2813c7424fd2b2c3922e7cf9f18aaed2bb4b9749fd914b"
+      CONTRACT_SHA256 = "139fb4134dba3cef4df6bbbefa0a8dfc08cbf0e579968dc639d2820945b8601a"
       LIST_CHANNELS_PATH = "/api/v1/channels"
+      ONBOARD_ACTOR_PATH = "/api/v1/actors/onboard"
       PUBLISH_PUBLICATION_PATH = "/api/v1/publications"
       RESOLVE_ACTOR_PATH = "/api/v1/actors/resolve"
+      RESOLVE_PERSONAL_ACTOR_PATH = "/api/v1/actors/personal/resolve"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
 
       def initialize(base_url:, token:, transport:)
@@ -29,15 +31,29 @@ module PrismBot
         request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
       end
 
-      def resolve_actor(provider:, provider_scope:, subject_id:)
+      def onboard_actor(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          ONBOARD_ACTOR_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
+      def resolve_actor(workspace_id:, provider:, provider_scope:, subject_id:)
         request(
           "POST",
           RESOLVE_ACTOR_PATH,
-          payload: {
-            "provider" => provider,
-            "provider_scope" => provider_scope,
-            "subject_id" => subject_id
-          }
+          payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
+            "workspace_id" => workspace_id
+          )
+        )
+      end
+
+      def resolve_personal_actor(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          RESOLVE_PERSONAL_ACTOR_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
         )
       end
 
@@ -60,6 +76,14 @@ module PrismBot
       end
 
       private
+
+      def provider_subject_payload(provider, provider_scope, subject_id)
+        {
+          "provider" => provider,
+          "provider_scope" => provider_scope,
+          "subject_id" => subject_id
+        }
+      end
 
       def request(method, path, payload: nil, idempotency_key: nil)
         headers = {
