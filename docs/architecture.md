@@ -47,9 +47,17 @@ Telegram numeric user ID
     -> ActorResolver port
     -> Hub ProviderIdentityBinding
     -> Hub UserIdentity
-    -> Hub WorkspaceMembership
+    -> server-derived personal workspace + owner membership
     -> HumanActor(person:<canonical-id>, role)
 ```
+
+Ordinary actor authorization uses Hub's read-only personal actor resolution. The
+client does not supply a workspace identifier and cannot create or reactivate
+identity state. Hub derives the personal workspace from the canonical identity
+and requires its active owner membership before returning the actor projection.
+The separate onboarding operation is exposed by the generated client for a
+future explicit `/start` flow; ordinary commands must never use onboarding as an
+authorization fallback.
 
 The resulting `AuthorizedUpdate` composes the original immutable Telegram update
 with the resolved `HumanActor`. Existing command handlers consume the update
