@@ -19,7 +19,14 @@ operations = contract.fetch("paths").each_with_object({}) do |(path, methods), v
   end
 end
 
-required = %w[listChannels publishPublication resolveActor validatePublication]
+required = %w[
+  listChannels
+  onboardActor
+  publishPublication
+  resolveActor
+  resolvePersonalActor
+  validatePublication
+]
 missing = required - operations.keys
 abort "missing Hub operations: #{missing.join(', ')}" if missing.any?
 
@@ -32,8 +39,10 @@ template = <<~'RUBY'
       class PrismHubV1Client
         CONTRACT_SHA256 = "%<digest>s"
         LIST_CHANNELS_PATH = %<list_path>s
+        ONBOARD_ACTOR_PATH = %<onboard_actor_path>s
         PUBLISH_PUBLICATION_PATH = %<publish_path>s
         RESOLVE_ACTOR_PATH = %<resolve_actor_path>s
+        RESOLVE_PERSONAL_ACTOR_PATH = %<resolve_personal_actor_path>s
         VALIDATE_PUBLICATION_PATH = %<validate_path>s
 
         def initialize(base_url:, token:, transport:)
@@ -55,15 +64,29 @@ template = <<~'RUBY'
           request("GET", "#{LIST_CHANNELS_PATH}?#{URI.encode_www_form(parameters)}")
         end
 
-        def resolve_actor(provider:, provider_scope:, subject_id:)
+        def onboard_actor(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            ONBOARD_ACTOR_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
+        def resolve_actor(workspace_id:, provider:, provider_scope:, subject_id:)
           request(
             "POST",
             RESOLVE_ACTOR_PATH,
-            payload: {
-              "provider" => provider,
-              "provider_scope" => provider_scope,
-              "subject_id" => subject_id
-            }
+            payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
+              "workspace_id" => workspace_id
+            )
+          )
+        end
+
+        def resolve_personal_actor(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            RESOLVE_PERSONAL_ACTOR_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
           )
         end
 
@@ -86,6 +109,14 @@ template = <<~'RUBY'
         end
 
         private
+
+        def provider_subject_payload(provider, provider_scope, subject_id)
+          {
+            "provider" => provider,
+            "provider_scope" => provider_scope,
+            "subject_id" => subject_id
+          }
+        end
 
         def request(method, path, payload: nil, idempotency_key: nil)
           headers = {
@@ -137,8 +168,10 @@ generated = format(
   template,
   digest: Digest::SHA256.hexdigest(contract_source),
   list_path: operations.fetch("listChannels").inspect,
+  onboard_actor_path: operations.fetch("onboardActor").inspect,
   publish_path: operations.fetch("publishPublication").inspect,
   resolve_actor_path: operations.fetch("resolveActor").inspect,
+  resolve_personal_actor_path: operations.fetch("resolvePersonalActor").inspect,
   validate_path: operations.fetch("validatePublication").inspect
 )
 

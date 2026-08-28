@@ -22,7 +22,7 @@ class PrismHubV1ClientTest < Minitest::Test
     )
   end
 
-  def test_sends_actor_evidence_without_publication_idempotency_header
+  def test_sends_workspace_actor_evidence_without_publication_idempotency_header
     transport = FakeTransport.new(
       body: JSON.generate(
         "actor" => {
@@ -34,6 +34,7 @@ class PrismHubV1ClientTest < Minitest::Test
     client = build_client(transport)
 
     client.resolve_actor(
+      workspace_id: "personal-0x0sky",
       provider: "telegram",
       provider_scope: "global",
       subject_id: "123456789"
@@ -48,9 +49,42 @@ class PrismHubV1ClientTest < Minitest::Test
       {
         "provider" => "telegram",
         "provider_scope" => "global",
-        "subject_id" => "123456789"
+        "subject_id" => "123456789",
+        "workspace_id" => "personal-0x0sky"
       },
       JSON.parse(request.fetch(:body))
+    )
+  end
+
+  def test_sends_actor_onboarding_without_publication_idempotency_header
+    transport = FakeTransport.new(body: JSON.generate(personal_actor_response))
+    client = build_client(transport)
+
+    client.onboard_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    assert_provider_subject_request(
+      transport.calls.fetch(0),
+      "/api/v1/actors/onboard"
+    )
+  end
+
+  def test_sends_personal_actor_resolution_without_publication_idempotency_header
+    transport = FakeTransport.new(body: JSON.generate(personal_actor_response))
+    client = build_client(transport)
+
+    client.resolve_personal_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    assert_provider_subject_request(
+      transport.calls.fetch(0),
+      "/api/v1/actors/personal/resolve"
     )
   end
 
@@ -96,5 +130,30 @@ class PrismHubV1ClientTest < Minitest::Test
       token: TOKEN,
       transport: transport
     )
+  end
+
+  def assert_provider_subject_request(request, path)
+    assert_equal "POST", request.fetch(:method)
+    assert_equal "https://hub.example.test#{path}", request.fetch(:url)
+    assert_equal "application/json", request.fetch(:headers).fetch("content-type")
+    refute request.fetch(:headers).key?("idempotency-key")
+    assert_equal(
+      {
+        "provider" => "telegram",
+        "provider_scope" => "global",
+        "subject_id" => "123456789"
+      },
+      JSON.parse(request.fetch(:body))
+    )
+  end
+
+  def personal_actor_response
+    {
+      "actor" => {
+        "identity" => {"type" => "person", "id" => "0x0sky"},
+        "workspace_id" => "personal-0x0sky",
+        "role" => "owner"
+      }
+    }
   end
 end

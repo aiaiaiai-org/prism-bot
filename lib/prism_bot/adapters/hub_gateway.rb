@@ -16,7 +16,7 @@ module PrismBot
       end
 
       def resolve_actor(provider:, provider_scope:, subject_id:)
-        response = @client.resolve_actor(
+        response = @client.resolve_personal_actor(
           provider: provider,
           provider_scope: provider_scope,
           subject_id: subject_id
@@ -27,6 +27,12 @@ module PrismBot
           raise TransportError.new(
             "bot.hub.actor.identity_type.invalid",
             "Prism Hub returned a non-human actor identity"
+          )
+        end
+        unless actor.fetch("workspace_id").is_a?(String) && !actor.fetch("workspace_id").empty?
+          raise TransportError.new(
+            "bot.hub.actor.workspace.invalid",
+            "Prism Hub returned an invalid personal workspace"
           )
         end
 

@@ -12,8 +12,10 @@
 - `/help`, `/channels`, and multi-channel text `/publish` commands.
 - Stable publication idempotency keys based on Telegram update IDs.
 - Immutable provider-neutral publication aggregate.
-- Generated Prism Hub v1 client pinned to the exact actor-resolution API source
-  commit and SHA-256.
+- Generated Prism Hub v1 client pinned byte-for-byte to Hub `0.1.0-alpha.7`,
+  including onboarding and read-only personal actor operations.
+- Ordinary Telegram authorization resolves an existing personal actor without
+  caller-supplied workspace state or implicit onboarding.
 - Bounded channel pagination, capability validation, actor-response validation,
   and correlated Hub errors.
 - Tests and Full CI gates for syntax, style, behavior, dependencies,
@@ -21,12 +23,13 @@
 
 ## Required before a live personal deployment
 
+- Complete explicit Telegram `/start` onboarding; ordinary commands must remain
+  read-only with respect to human identity state.
 - Create and populate the `0x0sky/prisma-telegram` composition repository.
 - Select its hosting environment and configure HTTPS.
 - Create a Telegram bot, install secrets, and register its webhook.
-- Provision the Hub service principal with `actors:resolve` and required command
-  capabilities, then provision the personal `UserIdentity`, Telegram binding,
-  and active workspace membership.
+- Provision the Hub service principal with `actors:onboard`, `actors:resolve`, and
+  required command capabilities.
 - Deploy Prism Hub with durable account/channel configuration and idempotency.
 - Compose Prism runtime with real provider adapters and secret storage.
 - Implement Prism Instagram post/story plus media-resolution capability before
@@ -48,8 +51,10 @@ allow-list.
 
 ## Next executable increment
 
-Add persistent Hub-owned bot lifecycle state (`active`, `paused`, `disabled`),
-then expose the focused operations needed by Telegram `/stop`, `/resume`, and
-`/status`. Pausing must be durable and must not terminate the webhook process.
+Make Telegram `/start` the only onboarding entry point: resolve-or-create the
+provider-backed identity and personal workspace through Hub, while every ordinary
+command continues to use read-only personal actor resolution. After that boundary
+is complete, add persistent Hub-owned bot lifecycle state (`active`, `paused`,
+`disabled`) before exposing `/stop`, `/resume`, and `/status`.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
