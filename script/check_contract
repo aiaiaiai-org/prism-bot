@@ -83,12 +83,16 @@ unless identity_properties == %w[id type]
 end
 
 %w[/api/v1/actors/onboard /api/v1/actors/personal/resolve].each do |route|
-  schema_ref = contract.dig(route == "/api/v1/actors/onboard" ? "paths" : "paths", route, "post", "requestBody", "content", "application/json", "schema", "$ref")
+  schema_ref = contract.dig(
+    "paths", route, "post", "requestBody", "content", "application/json", "schema", "$ref"
+  )
   unless schema_ref == "#/components/schemas/ActorOnboardingRequest"
     raise "#{route} must use ActorOnboardingRequest"
   end
 
-  response_ref = contract.dig("paths", route, "post", "responses", "200", "content", "application/json", "schema", "$ref")
+  response_ref = contract.dig(
+    "paths", route, "post", "responses", "200", "content", "application/json", "schema", "$ref"
+  )
   unless response_ref == "#/components/schemas/ActorOnboardingResponse"
     raise "#{route} must use ActorOnboardingResponse"
   end
