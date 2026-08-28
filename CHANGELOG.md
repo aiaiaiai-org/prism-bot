@@ -11,6 +11,7 @@
 - Hub-resolved Telegram human actors with canonical identity and workspace role.
 - Optional Telegram chat-context restriction separated from human authorization.
 - Hub actor onboarding and read-only personal actor client operations.
+- Explicit Telegram `/start` onboarding with idempotent Hub-backed identity creation.
 
 ### Changed
 
@@ -18,5 +19,7 @@
   the former local user allow-list is rejected at configuration time.
 - Existing Telegram actor authorization now uses Hub personal actor resolution,
   so the client no longer needs to know a human workspace before authorization.
+- Ordinary Telegram commands never fall back to onboarding when actor resolution
+  denies the sender; identity creation remains exclusive to `/start`.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
