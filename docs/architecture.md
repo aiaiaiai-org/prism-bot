@@ -9,8 +9,8 @@ through focused ports.
 flowchart TD
     Webhook["Telegram webhook"] --> Context["Telegram context policy"]
     Context --> ActorAuth["Telegram actor authorizer"]
-    ActorAuth --> ActorUseCase["Resolve actor use case"]
-    ActorUseCase --> ActorPort["Actor resolver port"]
+    ActorAuth --> ActorUseCase["Resolve or onboard actor use case"]
+    ActorUseCase --> ActorPort["Actor resolver / onboarder ports"]
     ActorAdapter["Hub adapter + generated client"] --> ActorPort
     ActorAdapter --> Hub["Prism Hub API v1"]
     ActorAuth --> Router["Command registry"]
@@ -32,7 +32,9 @@ flowchart TD
 | `bootstrap` | Environment parsing and explicit composition | Runtime business behavior |
 
 The command router is a registry. Adding a command means supplying another
-handler object, not extending a central command or provider conditional.
+handler object, not extending a central command or provider conditional. Telegram
+command parsing is shared by the router and actor gate so `/start` cannot be
+recognized differently at the identity and dispatch boundaries.
 
 ## Human and machine identity
 
@@ -44,7 +46,7 @@ credential, while Telegram actor evidence follows this chain:
 Telegram numeric user ID
     -> decimal string at the Telegram adapter boundary
     -> provider=telegram, provider_scope=global
-    -> ActorResolver port
+    -> ActorResolver / ActorOnboarder port
     -> Hub ProviderIdentityBinding
     -> Hub UserIdentity
     -> server-derived personal workspace + owner membership
@@ -55,9 +57,12 @@ Ordinary actor authorization uses Hub's read-only personal actor resolution. The
 client does not supply a workspace identifier and cannot create or reactivate
 identity state. Hub derives the personal workspace from the canonical identity
 and requires its active owner membership before returning the actor projection.
-The separate onboarding operation is exposed by the generated client for a
-future explicit `/start` flow; ordinary commands must never use onboarding as an
-authorization fallback.
+
+`/start` is the only Telegram command that selects the separate onboarding use
+case. Hub owns idempotent resolve-or-create behavior, so repeated `/start` calls
+return the same canonical identity rather than creating local bot state. A failed
+ordinary resolution never falls back to onboarding. This keeps identity creation
+explicit and prevents arbitrary commands from becoming account-creation events.
 
 The resulting `AuthorizedUpdate` composes the original immutable Telegram update
 with the resolved `HumanActor`. Existing command handlers consume the update
@@ -65,16 +70,17 @@ interface while future authorization can use the actor without reconstructing
 identity from Telegram data.
 
 `PRISM_BOT_TELEGRAM_ALLOWED_CHAT_IDS` is only a local context filter. An empty
-list means every chat may attempt Hub actor resolution. A configured list can
-reject a chat before a network call, but a chat ID never proves who the human is.
-The former local Telegram user allow-list is rejected at configuration time.
+list means every chat may attempt Hub actor resolution or explicit `/start`
+onboarding. A configured list can reject a chat before a network call, but a chat
+ID never proves who the human is. The former local Telegram user allow-list is
+rejected at configuration time.
 
 Hub's explicit `hub.actor.not_authorized` result is mapped to an ordinary
-deny-without-disclosure outcome. Other Hub failures, including a missing
-`actors:resolve` machine capability, remain typed failures instead of being
-misreported as an unknown human. The bot does not notify a sender when actor
-resolution itself failed, because that sender has not yet been authenticated as
-a human actor.
+deny-without-disclosure outcome. Other Hub failures, including missing machine
+capabilities, remain typed failures instead of being misreported as an unknown
+human. The bot does not notify a sender when actor resolution or onboarding
+itself failed, because that sender has not yet been authenticated as a human
+actor.
 
 ## Delivery and failure semantics
 
