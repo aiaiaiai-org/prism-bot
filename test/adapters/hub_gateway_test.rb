@@ -26,7 +26,7 @@ class HubGatewayTest < Minitest::Test
       @calls = []
     end
 
-    def resolve_actor(provider:, provider_scope:, subject_id:)
+    def resolve_personal_actor(provider:, provider_scope:, subject_id:)
       @calls << {
         provider: provider,
         provider_scope: provider_scope,
@@ -38,15 +38,8 @@ class HubGatewayTest < Minitest::Test
     end
   end
 
-  def test_maps_hub_actor_response_to_provider_independent_human_actor
-    client = ActorClient.new(
-      response: {
-        "actor" => {
-          "identity" => {"type" => "person", "id" => "0x0sky"},
-          "role" => "owner"
-        }
-      }
-    )
+  def test_maps_hub_personal_actor_response_to_provider_independent_human_actor
+    client = ActorClient.new(response: actor_response)
     gateway = PrismBot::Adapters::HubGateway.new(client: client)
 
     actor = gateway.resolve_actor(
@@ -102,16 +95,9 @@ class HubGatewayTest < Minitest::Test
   end
 
   def test_rejects_malformed_actor_disclosure
-    gateway = PrismBot::Adapters::HubGateway.new(
-      client: ActorClient.new(
-        response: {
-          "actor" => {
-            "identity" => {"type" => "service", "id" => "telegram-bot"},
-            "role" => "owner"
-          }
-        }
-      )
-    )
+    response = actor_response
+    response["actor"]["identity"] = {"type" => "service", "id" => "telegram-bot"}
+    gateway = PrismBot::Adapters::HubGateway.new(client: ActorClient.new(response: response))
 
     error = assert_raises(PrismBot::TransportError) do
       gateway.resolve_actor(
@@ -122,6 +108,22 @@ class HubGatewayTest < Minitest::Test
     end
 
     assert_equal "bot.hub.actor.identity_type.invalid", error.code
+  end
+
+  def test_rejects_missing_personal_workspace
+    response = actor_response
+    response["actor"].delete("workspace_id")
+    gateway = PrismBot::Adapters::HubGateway.new(client: ActorClient.new(response: response))
+
+    error = assert_raises(PrismBot::TransportError) do
+      gateway.resolve_actor(
+        provider: "telegram",
+        provider_scope: "global",
+        subject_id: "7"
+      )
+    end
+
+    assert_equal "bot.hub.actor.response.invalid", error.code
   end
 
   def test_collects_all_channel_pages
@@ -162,6 +164,16 @@ class HubGatewayTest < Minitest::Test
   end
 
   private
+
+  def actor_response
+    {
+      "actor" => {
+        "identity" => {"type" => "person", "id" => "0x0sky"},
+        "workspace_id" => "personal-0x0sky",
+        "role" => "owner"
+      }
+    }
+  end
 
   def response(id, next_cursor)
     {
