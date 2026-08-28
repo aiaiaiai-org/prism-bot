@@ -9,13 +9,14 @@
 - Optional local chat-context restriction that cannot authorize a human by itself.
 - Immutable `HumanActor` and `AuthorizedUpdate` values carrying canonical identity
   and active workspace role into command handling.
+- Explicit `/start` onboarding backed by Hub's idempotent provider identity flow.
+- Ordinary commands use read-only personal actor resolution and never create
+  identity state as a fallback.
 - `/help`, `/channels`, and multi-channel text `/publish` commands.
 - Stable publication idempotency keys based on Telegram update IDs.
 - Immutable provider-neutral publication aggregate.
 - Generated Prism Hub v1 client pinned byte-for-byte to Hub `0.1.0-alpha.7`,
   including onboarding and read-only personal actor operations.
-- Ordinary Telegram authorization resolves an existing personal actor without
-  caller-supplied workspace state or implicit onboarding.
 - Bounded channel pagination, capability validation, actor-response validation,
   and correlated Hub errors.
 - Tests and Full CI gates for syntax, style, behavior, dependencies,
@@ -23,13 +24,13 @@
 
 ## Required before a live personal deployment
 
-- Complete explicit Telegram `/start` onboarding; ordinary commands must remain
-  read-only with respect to human identity state.
+- Add persistent Hub-owned bot lifecycle state and Telegram `/stop`, `/resume`,
+  and `/status` commands.
 - Create and populate the `0x0sky/prisma-telegram` composition repository.
 - Select its hosting environment and configure HTTPS.
 - Create a Telegram bot, install secrets, and register its webhook.
 - Provision the Hub service principal with `actors:onboard`, `actors:resolve`, and
-  required command capabilities.
+  required lifecycle/publication capabilities.
 - Deploy Prism Hub with durable account/channel configuration and idempotency.
 - Compose Prism runtime with real provider adapters and secret storage.
 - Implement Prism Instagram post/story plus media-resolution capability before
@@ -51,10 +52,8 @@ allow-list.
 
 ## Next executable increment
 
-Make Telegram `/start` the only onboarding entry point: resolve-or-create the
-provider-backed identity and personal workspace through Hub, while every ordinary
-command continues to use read-only personal actor resolution. After that boundary
-is complete, add persistent Hub-owned bot lifecycle state (`active`, `paused`,
-`disabled`) before exposing `/stop`, `/resume`, and `/status`.
+Add persistent Hub-owned bot lifecycle state (`active`, `paused`, `disabled`),
+then expose focused owner-authorized operations for Telegram `/stop`, `/resume`,
+and `/status`. Pausing must be durable and must not terminate the webhook process.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
