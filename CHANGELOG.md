@@ -12,6 +12,8 @@
 - Optional Telegram chat-context restriction separated from human authorization.
 - Hub actor onboarding and read-only personal actor client operations.
 - Explicit Telegram `/start` onboarding with idempotent Hub-backed identity creation.
+- Hub-backed per-user bot lifecycle commands `/status`, `/stop`, and `/resume`.
+- Central lifecycle gating that blocks ordinary commands for paused or disabled personal instances.
 
 ### Changed
 
@@ -21,5 +23,7 @@
   so the client no longer needs to know a human workspace before authorization.
 - Ordinary Telegram commands never fall back to onboarding when actor resolution
   denies the sender; identity creation remains exclusive to `/start`.
+- The pinned Hub contract is now `0.1.0-alpha.8` and includes personal lifecycle operations.
+- `/stop` persists a personal pause in Hub and never terminates the shared webhook process.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
