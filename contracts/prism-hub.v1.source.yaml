@@ -2,7 +2,7 @@
 
 source:
   repository: aiaiaiai-org/prism-hub
-  commit: 62347ed0daf70f5beb6392ab64edd5e5b870bf9c
+  commit: 9b4d10aefa0cea165945b9242e374e8e7e352bc5
   path: openapi/prism-hub.v1.yaml
-  sha256: 139fb4134dba3cef4df6bbbefa0a8dfc08cbf0e579968dc639d2820945b8601a
+  sha256: 5f5b3c45ad9d406a3dfe274adbde2553f517bb13cc9bb4be61efcdd0f362c517
   imported_at: "2026-08-28"
