@@ -4,12 +4,15 @@
 module PrismBot
   module Generated
     class PrismHubV1Client
-      CONTRACT_SHA256 = "139fb4134dba3cef4df6bbbefa0a8dfc08cbf0e579968dc639d2820945b8601a"
+      CONTRACT_SHA256 = "5f5b3c45ad9d406a3dfe274adbde2553f517bb13cc9bb4be61efcdd0f362c517"
+      GET_PERSONAL_BOT_STATUS_PATH = "/api/v1/bot-instances/personal/status"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       ONBOARD_ACTOR_PATH = "/api/v1/actors/onboard"
+      PAUSE_PERSONAL_BOT_PATH = "/api/v1/bot-instances/personal/pause"
       PUBLISH_PUBLICATION_PATH = "/api/v1/publications"
       RESOLVE_ACTOR_PATH = "/api/v1/actors/resolve"
       RESOLVE_PERSONAL_ACTOR_PATH = "/api/v1/actors/personal/resolve"
+      RESUME_PERSONAL_BOT_PATH = "/api/v1/bot-instances/personal/resume"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
 
       def initialize(base_url:, token:, transport:)
@@ -25,6 +28,14 @@ module PrismBot
         @transport = transport
       end
 
+      def get_personal_bot_status(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          GET_PERSONAL_BOT_STATUS_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
       def list_channels(limit: 100, cursor: nil)
         parameters = {"limit" => limit}
         parameters["cursor"] = cursor if cursor
@@ -35,6 +46,14 @@ module PrismBot
         request(
           "POST",
           ONBOARD_ACTOR_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
+      def pause_personal_bot(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          PAUSE_PERSONAL_BOT_PATH,
           payload: provider_subject_payload(provider, provider_scope, subject_id)
         )
       end
@@ -53,6 +72,14 @@ module PrismBot
         request(
           "POST",
           RESOLVE_PERSONAL_ACTOR_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
+      def resume_personal_bot(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          RESUME_PERSONAL_BOT_PATH,
           payload: provider_subject_payload(provider, provider_scope, subject_id)
         )
       end

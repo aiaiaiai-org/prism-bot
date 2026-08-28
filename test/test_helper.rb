@@ -63,9 +63,44 @@ module PrismBotTestSupport
     end
   end
 
+  class FakeBotLifecycle
+    include PrismBot::Ports::BotLifecycle
+
+    attr_reader :requests
+
+    def initialize(status: "active", error: nil)
+      @state = PrismBot::Domain::BotLifecycleState.new(status: status)
+      @error = error
+      @requests = []
+    end
+
+    def status(**provider_evidence)
+      record(:status, provider_evidence)
+      @state
+    end
+
+    def pause(**provider_evidence)
+      record(:pause, provider_evidence)
+      @state = PrismBot::Domain::BotLifecycleState.new(status: "paused")
+    end
+
+    def resume(**provider_evidence)
+      record(:resume, provider_evidence)
+      @state = PrismBot::Domain::BotLifecycleState.new(status: "active")
+    end
+
+    private
+
+    def record(operation, provider_evidence)
+      @requests << provider_evidence.merge(operation: operation)
+      raise @error if @error
+    end
+  end
+
   class FakeHubGateway
     include PrismBot::Ports::ActorOnboarder
     include PrismBot::Ports::ActorResolver
+    include PrismBot::Ports::BotLifecycle
     include PrismBot::Ports::ChannelCatalog
     include PrismBot::Ports::PublicationPublisher
 
@@ -83,6 +118,7 @@ module PrismBotTestSupport
         canonical_id: "0x0sky",
         role: "owner"
       )
+      @lifecycle_state = PrismBot::Domain::BotLifecycleState.new(status: "active")
       @publications = []
       @idempotency_keys = []
     end
@@ -93,6 +129,18 @@ module PrismBotTestSupport
 
     def resolve_actor(**)
       @actor
+    end
+
+    def status(**)
+      @lifecycle_state
+    end
+
+    def pause(**)
+      @lifecycle_state = PrismBot::Domain::BotLifecycleState.new(status: "paused")
+    end
+
+    def resume(**)
+      @lifecycle_state = PrismBot::Domain::BotLifecycleState.new(status: "active")
     end
 
     def list
@@ -190,10 +238,14 @@ module PrismBotTestSupport
     sender: FakeMessageSender.new,
     actor_resolver: FakeActorResolver.new,
     actor_onboarder: FakeActorOnboarder.new,
+    bot_lifecycle: FakeBotLifecycle.new,
     allowed_chat_ids: [],
     max_body_bytes: 1024
   )
     logger = Logger.new(StringIO.new)
+    lifecycle = PrismBot::Channels::Telegram::LifecycleController.new(
+      bot_lifecycle: PrismBot::UseCases::ManageBotLifecycle.new(bot_lifecycle: bot_lifecycle)
+    )
     PrismBot::Channels::Telegram::WebhookApp.new(
       secret: PrismBot::Channels::Telegram::WebhookSecret.new(WEBHOOK_SECRET),
       update_parser: PrismBot::Channels::Telegram::UpdateParser.new,
@@ -208,6 +260,7 @@ module PrismBotTestSupport
           actor_onboarder: actor_onboarder
         )
       ),
+      lifecycle_gate: PrismBot::Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
       command_router: router,
       message_sender: sender,
       presenter: PrismBot::Channels::Telegram::ResultPresenter.new,

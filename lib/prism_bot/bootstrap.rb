@@ -18,9 +18,13 @@ module PrismBot
         transport: transport
       )
       presenter = Channels::Telegram::ResultPresenter.new
+      lifecycle = Channels::Telegram::LifecycleController.new(
+        bot_lifecycle: UseCases::ManageBotLifecycle.new(bot_lifecycle: hub_gateway)
+      )
       handlers = handlers(
         configuration: configuration,
         hub_gateway: hub_gateway,
+        lifecycle: lifecycle,
         message_sender: message_sender,
         presenter: presenter
       )
@@ -44,6 +48,7 @@ module PrismBot
           resolve_actor: UseCases::ResolveActor.new(actor_resolver: hub_gateway),
           onboard_actor: UseCases::OnboardActor.new(actor_onboarder: hub_gateway)
         ),
+        lifecycle_gate: Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
         command_router: router,
         message_sender: message_sender,
         presenter: presenter,
@@ -52,7 +57,7 @@ module PrismBot
       )
     end
 
-    def self.handlers(configuration:, hub_gateway:, message_sender:, presenter:)
+    def self.handlers(configuration:, hub_gateway:, lifecycle:, message_sender:, presenter:)
       {
         "help" => Channels::Telegram::Handlers::Help.new(
           message_sender: message_sender,
@@ -62,6 +67,9 @@ module PrismBot
           message_sender: message_sender,
           presenter: presenter
         ),
+        "status" => lifecycle_handler(:status, lifecycle, message_sender, presenter),
+        "stop" => lifecycle_handler(:pause, lifecycle, message_sender, presenter),
+        "resume" => lifecycle_handler(:resume, lifecycle, message_sender, presenter),
         "channels" => Channels::Telegram::Handlers::Channels.new(
           list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
           message_sender: message_sender,
@@ -84,5 +92,15 @@ module PrismBot
       }.freeze
     end
     private_class_method :handlers
+
+    def self.lifecycle_handler(operation, lifecycle, message_sender, presenter)
+      Channels::Telegram::Handlers::Lifecycle.new(
+        operation: operation,
+        lifecycle: lifecycle,
+        message_sender: message_sender,
+        presenter: presenter
+      )
+    end
+    private_class_method :lifecycle_handler
   end
 end

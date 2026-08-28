@@ -20,11 +20,14 @@ operations = contract.fetch("paths").each_with_object({}) do |(path, methods), v
 end
 
 required = %w[
+  getPersonalBotStatus
   listChannels
   onboardActor
+  pausePersonalBot
   publishPublication
   resolveActor
   resolvePersonalActor
+  resumePersonalBot
   validatePublication
 ]
 missing = required - operations.keys
@@ -38,11 +41,14 @@ template = <<~'RUBY'
     module Generated
       class PrismHubV1Client
         CONTRACT_SHA256 = "%<digest>s"
+        GET_PERSONAL_BOT_STATUS_PATH = %<status_path>s
         LIST_CHANNELS_PATH = %<list_path>s
         ONBOARD_ACTOR_PATH = %<onboard_actor_path>s
+        PAUSE_PERSONAL_BOT_PATH = %<pause_path>s
         PUBLISH_PUBLICATION_PATH = %<publish_path>s
         RESOLVE_ACTOR_PATH = %<resolve_actor_path>s
         RESOLVE_PERSONAL_ACTOR_PATH = %<resolve_personal_actor_path>s
+        RESUME_PERSONAL_BOT_PATH = %<resume_path>s
         VALIDATE_PUBLICATION_PATH = %<validate_path>s
 
         def initialize(base_url:, token:, transport:)
@@ -58,6 +64,14 @@ template = <<~'RUBY'
           @transport = transport
         end
 
+        def get_personal_bot_status(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            GET_PERSONAL_BOT_STATUS_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
         def list_channels(limit: 100, cursor: nil)
           parameters = {"limit" => limit}
           parameters["cursor"] = cursor if cursor
@@ -68,6 +82,14 @@ template = <<~'RUBY'
           request(
             "POST",
             ONBOARD_ACTOR_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
+        def pause_personal_bot(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            PAUSE_PERSONAL_BOT_PATH,
             payload: provider_subject_payload(provider, provider_scope, subject_id)
           )
         end
@@ -86,6 +108,14 @@ template = <<~'RUBY'
           request(
             "POST",
             RESOLVE_PERSONAL_ACTOR_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
+        def resume_personal_bot(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            RESUME_PERSONAL_BOT_PATH,
             payload: provider_subject_payload(provider, provider_scope, subject_id)
           )
         end
@@ -167,11 +197,14 @@ RUBY
 generated = format(
   template,
   digest: Digest::SHA256.hexdigest(contract_source),
+  status_path: operations.fetch("getPersonalBotStatus").inspect,
   list_path: operations.fetch("listChannels").inspect,
   onboard_actor_path: operations.fetch("onboardActor").inspect,
+  pause_path: operations.fetch("pausePersonalBot").inspect,
   publish_path: operations.fetch("publishPublication").inspect,
   resolve_actor_path: operations.fetch("resolveActor").inspect,
   resolve_personal_actor_path: operations.fetch("resolvePersonalActor").inspect,
+  resume_path: operations.fetch("resumePersonalBot").inspect,
   validate_path: operations.fetch("validatePublication").inspect
 )
 

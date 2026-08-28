@@ -7,6 +7,9 @@ module PrismBot
         HELP = <<~TEXT.freeze
           Команди Prism Bot:
           /start — підключити себе до Prism
+          /status — поточний стан бота
+          /stop — призупинити бота для себе
+          /resume — відновити призупиненого бота
           /channels — доступні канали Hub
           /publish текст — допис у типові канали
           /publish [channel-a,channel-b] текст — допис у вибрані канали
@@ -28,6 +31,29 @@ module PrismBot
 
         def unknown
           "Невідома команда.\n\n#{HELP}"
+        end
+
+        def lifecycle(operation, state)
+          validate_lifecycle_state!(state)
+          case operation.to_sym
+          when :status
+            "Стан Prism Bot: #{state.status}."
+          when :pause
+            "Prism Bot призупинено для вас. /resume — відновити."
+          when :resume
+            "Prism Bot активний."
+          else
+            raise ArgumentError, "unsupported lifecycle operation"
+          end
+        end
+
+        def lifecycle_blocked(state)
+          validate_lifecycle_state!(state)
+          if state.paused?
+            "Prism Bot призупинено. Доступні /status, /resume та /help."
+          else
+            "Prism Bot вимкнено. /status покаже поточний стан; звичайний /resume недоступний."
+          end
         end
 
         def channels(values)
@@ -71,8 +97,10 @@ module PrismBot
           when InputError
             "Команду не виконано: #{error.message}"
           when HubError
+            return "Prism Bot вимкнено; звичайний /resume не може зняти цей стан." if error.code == "hub.bot_instance.disabled"
+
             reference = error.request_id ? " Запит: #{error.request_id}." : ""
-            "Hub відхилив запит (#{error.code}).#{reference} Перевірте /channels або журнал Hub."
+            "Hub відхилив запит (#{error.code}).#{reference} Перевірте /status або журнал Hub."
           when TransportError
             "Сервіс тимчасово недоступний (#{error.code}). Спробуйте пізніше."
           else
@@ -81,6 +109,12 @@ module PrismBot
         end
 
         private
+
+        def validate_lifecycle_state!(state)
+          return if state.is_a?(Domain::BotLifecycleState)
+
+          raise ArgumentError, "state must be a BotLifecycleState"
+        end
 
         def outcome_summary(outcomes, target_count)
           return "Передано цілей: #{target_count}." unless outcomes.is_a?(Array) && outcomes.any?

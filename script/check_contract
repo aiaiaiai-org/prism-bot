@@ -15,12 +15,15 @@ source = YAML.safe_load_file(source_path, aliases: false).fetch("source")
 actual_digest = Digest::SHA256.hexdigest(contract_source)
 raise "pinned Hub contract digest drift" unless source.fetch("sha256") == actual_digest
 raise "OpenAPI version drift" unless contract.fetch("openapi") == "3.1.0"
-raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.7"
+raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.8"
 
 expected_operations = {
   ["/api/v1/actors/resolve", "post"] => "resolveActor",
   ["/api/v1/actors/onboard", "post"] => "onboardActor",
   ["/api/v1/actors/personal/resolve", "post"] => "resolvePersonalActor",
+  ["/api/v1/bot-instances/personal/status", "post"] => "getPersonalBotStatus",
+  ["/api/v1/bot-instances/personal/pause", "post"] => "pausePersonalBot",
+  ["/api/v1/bot-instances/personal/resume", "post"] => "resumePersonalBot",
   ["/api/v1/channels", "get"] => "listChannels",
   ["/api/v1/publications/validate", "post"] => "validatePublication",
   ["/api/v1/publications", "post"] => "publishPublication"
@@ -49,6 +52,42 @@ unless onboarding_request.fetch("required").sort == %w[provider provider_scope s
 end
 unless onboarding_request.dig("properties", "subject_id", "type") == "string"
   raise "onboarding subject_id must remain opaque string data"
+end
+
+lifecycle_request = contract.dig("components", "schemas", "BotLifecycleRequest")
+unless lifecycle_request == {"$ref" => "#/components/schemas/ActorOnboardingRequest"}
+  raise "bot lifecycle request must expose only provider subject evidence"
+end
+
+lifecycle_state = contract.dig("components", "schemas", "BotLifecycleState")
+unless lifecycle_state.fetch("additionalProperties") == false &&
+    lifecycle_state.fetch("required") == ["status"] &&
+    lifecycle_state.fetch("properties").keys == ["status"] &&
+    lifecycle_state.dig("properties", "status", "enum") == %w[active paused disabled]
+  raise "bot lifecycle state disclosure drift"
+end
+
+lifecycle_response = contract.dig("components", "schemas", "BotLifecycleResponse")
+unless lifecycle_response.fetch("additionalProperties") == false &&
+    lifecycle_response.fetch("required") == ["bot_instance"] &&
+    lifecycle_response.fetch("properties").keys == ["bot_instance"]
+  raise "bot lifecycle response must expose only bot_instance state"
+end
+
+%w[
+  /api/v1/bot-instances/personal/status
+  /api/v1/bot-instances/personal/pause
+  /api/v1/bot-instances/personal/resume
+].each do |route|
+  schema_ref = contract.dig(
+    "paths", route, "post", "requestBody", "content", "application/json", "schema", "$ref"
+  )
+  raise "#{route} must use BotLifecycleRequest" unless schema_ref == "#/components/schemas/BotLifecycleRequest"
+
+  response_ref = contract.dig("paths", route, "post", "responses", "200", "$ref")
+  unless response_ref == "#/components/responses/BotLifecycleResponse"
+    raise "#{route} must use BotLifecycleResponse"
+  end
 end
 
 actor_response_properties = contract.dig(

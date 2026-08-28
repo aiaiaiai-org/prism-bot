@@ -9,6 +9,7 @@ module PrismBot
 
       include Ports::ActorOnboarder
       include Ports::ActorResolver
+      include Ports::BotLifecycle
       include Ports::ChannelCatalog
       include Ports::PublicationPublisher
 
@@ -34,6 +35,36 @@ module PrismBot
             subject_id: subject_id
           )
         end
+      end
+
+      def status(provider:, provider_scope:, subject_id:)
+        resolve_lifecycle_state(
+          @client.get_personal_bot_status(
+            provider: provider,
+            provider_scope: provider_scope,
+            subject_id: subject_id
+          )
+        )
+      end
+
+      def pause(provider:, provider_scope:, subject_id:)
+        resolve_lifecycle_state(
+          @client.pause_personal_bot(
+            provider: provider,
+            provider_scope: provider_scope,
+            subject_id: subject_id
+          )
+        )
+      end
+
+      def resume(provider:, provider_scope:, subject_id:)
+        resolve_lifecycle_state(
+          @client.resume_personal_bot(
+            provider: provider,
+            provider_scope: provider_scope,
+            subject_id: subject_id
+          )
+        )
       end
 
       def list
@@ -83,6 +114,16 @@ module PrismBot
       end
 
       private
+
+      def resolve_lifecycle_state(response)
+        value = response.fetch("bot_instance")
+        Domain::BotLifecycleState.new(status: value.fetch("status"))
+      rescue InputError, KeyError, TypeError
+        raise TransportError.new(
+          "bot.hub.lifecycle.response.invalid",
+          "Prism Hub returned an invalid bot lifecycle response"
+        )
+      end
 
       def resolve_human_actor
         response = yield
