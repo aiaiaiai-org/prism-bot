@@ -3,6 +3,16 @@
 require_relative "../../test_helper"
 
 class ResultPresenterTest < Minitest::Test
+  def test_presents_onboarded_public_identity_and_commands
+    actor = PrismBot::Domain::HumanActor.new(canonical_id: "0x0sky", role: "owner")
+
+    message = presenter.started(actor)
+
+    assert_includes message, "Публічний ID: 0x0sky"
+    assert_includes message, "/start"
+    assert_includes message, "/channels"
+  end
+
   def test_presents_channel_capabilities
     message = presenter.channels(
       [

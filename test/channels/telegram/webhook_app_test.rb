@@ -15,12 +15,14 @@ class WebhookAppTest < Minitest::Test
     assert_empty router.updates
   end
 
-  def test_acknowledges_context_denial_without_resolving_actor
+  def test_acknowledges_context_denial_without_touching_human_identity
     router = RecordingRouter.new
     resolver = FakeActorResolver.new
+    onboarder = FakeActorOnboarder.new
     app = webhook_app(
       router: router,
       actor_resolver: resolver,
+      actor_onboarder: onboarder,
       allowed_chat_ids: [-2002]
     )
 
@@ -28,19 +30,49 @@ class WebhookAppTest < Minitest::Test
 
     assert_equal 200, status
     assert_empty resolver.requests
+    assert_empty onboarder.requests
     assert_empty router.updates
   end
 
-  def test_acknowledges_unauthorized_actor_without_dispatching
+  def test_acknowledges_unauthorized_ordinary_actor_without_onboarding
     router = RecordingRouter.new
     resolver = FakeActorResolver.new(denied_subject_ids: [999])
-    app = webhook_app(router: router, actor_resolver: resolver)
+    onboarder = FakeActorOnboarder.new
+    app = webhook_app(
+      router: router,
+      actor_resolver: resolver,
+      actor_onboarder: onboarder
+    )
 
-    status, = app.call(webhook_environment(telegram_payload(user_id: 999)))
+    status, = app.call(
+      webhook_environment(telegram_payload(text: "/help", user_id: 999))
+    )
 
     assert_equal 200, status
     assert_equal "999", resolver.requests.fetch(0).fetch(:subject_id)
+    assert_empty onboarder.requests
     assert_empty router.updates
+  end
+
+  def test_start_onboards_before_dispatch_even_when_read_only_resolution_would_deny
+    router = RecordingRouter.new
+    resolver = FakeActorResolver.new(denied_subject_ids: [999])
+    onboarder = FakeActorOnboarder.new
+    app = webhook_app(
+      router: router,
+      actor_resolver: resolver,
+      actor_onboarder: onboarder
+    )
+
+    status, = app.call(
+      webhook_environment(telegram_payload(text: "/start", user_id: 999))
+    )
+
+    assert_equal 200, status
+    assert_empty resolver.requests
+    assert_equal "999", onboarder.requests.fetch(0).fetch(:subject_id)
+    assert_equal 1, router.updates.length
+    assert_equal "person:0x0sky", router.updates.fetch(0).actor.canonical_ref
   end
 
   def test_dispatches_authorized_update_with_canonical_actor

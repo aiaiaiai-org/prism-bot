@@ -26,12 +26,18 @@ class HubGatewayTest < Minitest::Test
       @calls = []
     end
 
-    def resolve_personal_actor(provider:, provider_scope:, subject_id:)
-      @calls << {
-        provider: provider,
-        provider_scope: provider_scope,
-        subject_id: subject_id
-      }
+    def onboard_actor(**arguments)
+      record(:onboard_actor, arguments)
+    end
+
+    def resolve_personal_actor(**arguments)
+      record(:resolve_personal_actor, arguments)
+    end
+
+    private
+
+    def record(operation, arguments)
+      @calls << arguments.merge(operation: operation)
       raise @error if @error
 
       @response
@@ -51,7 +57,25 @@ class HubGatewayTest < Minitest::Test
     assert_equal "person:0x0sky", actor.canonical_ref
     assert_equal "owner", actor.role
     assert_equal(
-      [{provider: "telegram", provider_scope: "global", subject_id: "123456789"}],
+      [actor_call(:resolve_personal_actor, "123456789")],
+      client.calls
+    )
+  end
+
+  def test_maps_hub_onboarding_response_through_the_same_actor_validator
+    client = ActorClient.new(response: actor_response)
+    gateway = PrismBot::Adapters::HubGateway.new(client: client)
+
+    actor = gateway.onboard_actor(
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    assert_equal "person:0x0sky", actor.canonical_ref
+    assert_equal "owner", actor.role
+    assert_equal(
+      [actor_call(:onboard_actor, "123456789")],
       client.calls
     )
   end
@@ -164,6 +188,15 @@ class HubGatewayTest < Minitest::Test
   end
 
   private
+
+  def actor_call(operation, subject_id)
+    {
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: subject_id,
+      operation: operation
+    }
+  end
 
   def actor_response
     {

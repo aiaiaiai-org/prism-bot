@@ -6,6 +6,7 @@ module PrismBot
       class ResultPresenter
         HELP = <<~TEXT.freeze
           Команди Prism Bot:
+          /start — підключити себе до Prism
           /channels — доступні канали Hub
           /publish текст — допис у типові канали
           /publish [channel-a,channel-b] текст — допис у вибрані канали
@@ -15,6 +16,14 @@ module PrismBot
 
         def help
           HELP
+        end
+
+        def started(actor)
+          unless actor.is_a?(Domain::HumanActor)
+            raise ArgumentError, "actor must be a HumanActor"
+          end
+
+          "Prism готовий. Публічний ID: #{actor.canonical_id}.\n\n#{HELP}"
         end
 
         def unknown
