@@ -2,7 +2,7 @@
 
 module PrismBot
   class Bootstrap
-    def self.build(env:, logger: Logger.new($stdout))
+    def self.build(env:, client: Client::Default.new, logger: Logger.new($stdout))
       configuration = Configuration.new(env)
       transport = Adapters::NetHttpTransport.new(
         allow_insecure_http: configuration.allow_insecure_http
@@ -17,23 +17,39 @@ module PrismBot
         token: configuration.telegram_token,
         transport: transport
       )
-      presenter = Channels::Telegram::ResultPresenter.new
+      bot_lifecycle = UseCases::ManageBotLifecycle.new(bot_lifecycle: hub_gateway)
       lifecycle = Channels::Telegram::LifecycleController.new(
-        bot_lifecycle: UseCases::ManageBotLifecycle.new(bot_lifecycle: hub_gateway)
+        bot_lifecycle: bot_lifecycle
       )
-      handlers = handlers(
-        configuration: configuration,
-        hub_gateway: hub_gateway,
-        lifecycle: lifecycle,
+      services = Client::Services.new(
+        instance_id: configuration.instance_id,
+        default_channel_ids: configuration.default_channel_ids,
+        default_locale: configuration.default_locale,
+        default_voice_profile: configuration.default_voice_profile,
+        dispatch_policy: configuration.dispatch_policy,
         message_sender: message_sender,
-        presenter: presenter
+        list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
+        publish_publication: UseCases::PublishPublication.new(
+          publication_publisher: hub_gateway
+        ),
+        bot_lifecycle: bot_lifecycle
       )
-      router = Channels::Telegram::CommandRouter.new(
-        handlers: handlers,
-        fallback: Channels::Telegram::Handlers::Unknown.new(
-          message_sender: message_sender,
-          presenter: presenter
+      composition = client.call(services)
+      unless composition.is_a?(Client::Composition)
+        raise ConfigurationError.new(
+          "bot.client.composition.invalid",
+          "client must return a PrismBot::Client::Composition"
         )
+      end
+      command_router = Channels::Telegram::CommandRouter.new(
+        handlers: composition.command_handlers,
+        fallback: composition.fallback
+      )
+      interaction_router = Channels::Telegram::InteractionRouter.new(
+        command_router: command_router,
+        state_handlers: composition.state_handlers,
+        state_store: composition.state_store,
+        instance_id: configuration.instance_id
       )
 
       Channels::Telegram::WebhookApp.new(
@@ -49,58 +65,12 @@ module PrismBot
           onboard_actor: UseCases::OnboardActor.new(actor_onboarder: hub_gateway)
         ),
         lifecycle_gate: Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
-        command_router: router,
+        command_router: interaction_router,
         message_sender: message_sender,
-        presenter: presenter,
+        presenter: composition.presenter,
         logger: logger,
         max_body_bytes: configuration.max_webhook_bytes
       )
     end
-
-    def self.handlers(configuration:, hub_gateway:, lifecycle:, message_sender:, presenter:)
-      {
-        "help" => Channels::Telegram::Handlers::Help.new(
-          message_sender: message_sender,
-          presenter: presenter
-        ),
-        "start" => Channels::Telegram::Handlers::Start.new(
-          message_sender: message_sender,
-          presenter: presenter
-        ),
-        "status" => lifecycle_handler(:status, lifecycle, message_sender, presenter),
-        "stop" => lifecycle_handler(:pause, lifecycle, message_sender, presenter),
-        "resume" => lifecycle_handler(:resume, lifecycle, message_sender, presenter),
-        "channels" => Channels::Telegram::Handlers::Channels.new(
-          list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
-          message_sender: message_sender,
-          presenter: presenter
-        ),
-        "publish" => Channels::Telegram::Handlers::Publish.new(
-          arguments_parser: Channels::Telegram::PublishArguments.new(
-            default_channel_ids: configuration.default_channel_ids
-          ),
-          publish_publication: UseCases::PublishPublication.new(
-            publication_publisher: hub_gateway
-          ),
-          message_sender: message_sender,
-          presenter: presenter,
-          instance_id: configuration.instance_id,
-          locale: configuration.default_locale,
-          voice_profile: configuration.default_voice_profile,
-          dispatch_policy: configuration.dispatch_policy
-        )
-      }.freeze
-    end
-    private_class_method :handlers
-
-    def self.lifecycle_handler(operation, lifecycle, message_sender, presenter)
-      Channels::Telegram::Handlers::Lifecycle.new(
-        operation: operation,
-        lifecycle: lifecycle,
-        message_sender: message_sender,
-        presenter: presenter
-      )
-    end
-    private_class_method :lifecycle_handler
   end
 end
