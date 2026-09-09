@@ -2,7 +2,7 @@
 
 module PrismBot
   class Bootstrap
-    def self.build(env:, client: Client::Default.new, logger: Logger.new($stdout))
+    def self.build(env:, client: nil, logger: Logger.new($stdout))
       configuration = Configuration.new(env)
       transport = Adapters::NetHttpTransport.new(
         allow_insecure_http: configuration.allow_insecure_http
@@ -34,6 +34,7 @@ module PrismBot
         ),
         bot_lifecycle: bot_lifecycle
       )
+      client ||= Client::Default.new
       composition = client.call(services)
       unless composition.is_a?(Client::Composition)
         raise ConfigurationError.new(
