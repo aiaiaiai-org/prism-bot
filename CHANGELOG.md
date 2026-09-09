@@ -14,6 +14,9 @@
 - Explicit Telegram `/start` onboarding with idempotent Hub-backed identity creation.
 - Hub-backed per-user bot lifecycle commands `/status`, `/stop`, and `/resume`.
 - Central lifecycle gating that blocks ordinary commands for paused or disabled personal instances.
+- Public immutable `PrismBot::Client::Composition` and safe client services for concrete bot products.
+- Explicit interaction-state key, state, transition, and state-store contracts for multi-message flows.
+- Interaction routing that preserves command priority while deterministically routing ordinary follow-up messages.
 
 ### Changed
 
@@ -25,5 +28,8 @@
   denies the sender; identity creation remains exclusive to `/start`.
 - The pinned Hub contract is now `0.1.0-alpha.8` and includes personal lifecycle operations.
 - `/stop` persists a personal pause in Hub and never terminates the shared webhook process.
+- `PrismBot::Bootstrap` now composes the default Telegram client through the same
+  public client boundary available to external products instead of hardcoding
+  handlers and presentation inside bootstrap wiring.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
