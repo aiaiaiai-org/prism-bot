@@ -16,7 +16,8 @@ module PrismBot
           fallback: Channels::Telegram::Handlers::Unknown.new(
             message_sender: services.message_sender,
             presenter: @presenter
-          )
+          ),
+          presenter: @presenter
         )
       end
 
