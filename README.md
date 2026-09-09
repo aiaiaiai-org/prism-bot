@@ -1,12 +1,15 @@
 # Prism Bot
 
-Prism Bot is the messaging-surface boundary for Prism. The first executable
-module is a Telegram webhook application that consumes the versioned Prism Hub
-API and never calls Prism, Meta, or another publication provider directly.
+Prism Bot is the messaging-surface and bot-client infrastructure boundary for
+Prism. The first executable module is a Telegram webhook application that
+consumes the versioned Prism Hub API and never calls Prism, Meta, or another
+publication provider directly.
 
 This foundation provides:
 
 - a reusable Ruby gem and Rack application;
+- a public client-composition contract for concrete bot products;
+- explicit, injected interaction state for deterministic multi-message flows;
 - a generated, byte-pinned Prism Hub `v1` client;
 - explicit `/start` onboarding plus read-only Hub-resolved human identity for ordinary Telegram commands;
 - Hub-owned per-user bot lifecycle with `/status`, `/stop`, and `/resume`;
@@ -14,8 +17,8 @@ This foundation provides:
   human identity authorization;
 - bounded traversal of Hub channel pages with validated publishing capabilities;
 - verified Telegram webhook ingress and a focused Bot API sender adapter;
-- extensible command routing with `/help`, `/channels`, lifecycle, and text-only
-  `/publish` handlers;
+- extensible interaction routing with `/help`, `/channels`, lifecycle, and
+  text-only `/publish` handlers;
 - channel-independent use cases and immutable domain values;
 - Full CI with tests, dependency audit, generated-client drift, architecture,
   and copyright gates.
@@ -30,16 +33,19 @@ flowchart TD
     Resolve --> HubAdapter["Generated Hub client adapter"]
     HubAdapter --> Hub["prism-hub API v1"]
     Actor --> Lifecycle["Per-user lifecycle gate"]
-    Lifecycle --> Commands["Telegram command modules"]
+    Lifecycle --> Interaction["Interaction router"]
+    Client["Concrete client composition"] --> Interaction
+    State["Injected interaction state store"] --> Interaction
+    Interaction --> Commands["Telegram command modules"]
     Commands --> UseCases["Channel-independent use cases"]
     UseCases --> Ports["Lifecycle / channel catalog / publication ports"]
     HubAdapter --> Ports
 ```
 
 The bot holds only a Hub API token and its Telegram bot token. Provider
-credentials remain in Hub/runtime infrastructure. A new messaging surface adds
-its own adapter and command modules; it does not add a provider branch to shared
-application policy.
+credentials remain in Hub/runtime infrastructure. Concrete products receive
+safe use cases and non-secret defaults through `PrismBot::Client::Services`; they
+do not receive Hub/Telegram credentials, transport objects, or `HubGateway`.
 
 Telegram numeric user IDs are converted to opaque provider-subject strings only
 at the Telegram adapter boundary. Prism Hub resolves that evidence into a
@@ -49,6 +55,49 @@ never treated as proof of human identity.
 Bot lifecycle is also Hub-owned. One physical Telegram process can serve many
 personal workspaces: `/stop` pauses only the authenticated user's logical bot
 instance and never terminates the process or pauses another user.
+
+## Concrete clients
+
+`PrismBot::Bootstrap.build` accepts a client object:
+
+```ruby
+run PrismBot::Bootstrap.build(env: ENV, client: MyClient.new)
+```
+
+A client responds to `call(services)` and returns an immutable
+`PrismBot::Client::Composition`. The built-in `PrismBot::Client::Default` uses
+this exact contract for the standard command set, so external clients do not
+need to reconstruct private bootstrap wiring.
+
+A concrete product can extend the standard behaviour:
+
+```ruby
+class MyClient
+  def initialize(state_store:)
+    @state_store = state_store
+  end
+
+  def call(services)
+    PrismBot::Client::Default.new.call(services).with(
+      command_handlers: {"create_post" => BeginPost.new(sender: services.message_sender)},
+      state_handlers: {"awaiting_post_content" => CapturePost.new},
+      state_store: @state_store
+    )
+  end
+end
+```
+
+A command handler can return
+`PrismBot::Domain::InteractionTransition.set(InteractionState.new(...))`. The
+next ordinary message from that canonical actor is routed to the matching state
+handler. Commands retain priority while a state is pending, so safe lifecycle
+controls remain usable. State is scoped by client instance, messaging surface,
+and Hub-resolved canonical actor, never by Telegram username.
+
+Prism Bot does not provide hidden process-global conversation persistence. The
+default null store is sufficient for stateless clients and fails closed if a
+stateful transition is attempted. A production multi-message client must inject
+a store implementing `PrismBot::Ports::InteractionStateStore`.
 
 ## Commands
 
@@ -88,7 +137,7 @@ characters. `PRISM_BOT_DEFAULT_CHANNEL_IDS` is a JSON array of public Hub channe
 IDs. `PRISM_BOT_DISPATCH_POLICY` is either `require_all_valid` (default) or
 `independent`.
 
-Run the webhook application with:
+Run the default webhook application with:
 
 ```bash
 bundle install
