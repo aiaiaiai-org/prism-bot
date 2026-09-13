@@ -19,7 +19,7 @@ module PrismBot
           def call(update:, arguments:)
             state = @lifecycle.public_send(@operation, update)
             @message_sender.send_message(
-              chat_id: update.chat_id,
+              **update.reply_target,
               text: @presenter.lifecycle(@operation, state)
             )
           end

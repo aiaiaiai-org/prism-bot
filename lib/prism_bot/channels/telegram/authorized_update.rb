@@ -34,6 +34,14 @@ module PrismBot
         def text
           update.text
         end
+
+        def surface_context
+          update.surface_context
+        end
+
+        def reply_target
+          update.reply_target
+        end
       end
     end
   end

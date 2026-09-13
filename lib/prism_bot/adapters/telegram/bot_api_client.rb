@@ -21,8 +21,12 @@ module PrismBot
           @transport = transport
         end
 
-        def send_message(chat_id:, text:)
-          perform_send(chat_id: chat_id, text: truncate(String(text)))
+        def send_message(chat_id:, text:, message_thread_id: nil)
+          if !message_thread_id.nil? && (!message_thread_id.is_a?(Integer) || !message_thread_id.positive?)
+            raise InputError.new("bot.telegram.surface.thread.invalid", "Telegram topic is invalid")
+          end
+
+          perform_send(chat_id: chat_id, text: truncate(String(text)), message_thread_id: message_thread_id)
           nil
         end
 

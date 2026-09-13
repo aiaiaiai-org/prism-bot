@@ -82,6 +82,14 @@ module PrismBot
             return accepted
           end
 
+          if update.surface_context.chat_type == "channel"
+            if @context_policy.explicitly_allowed?(update) &&
+                %w[start context].include?(Command.parse(update.text)&.name)
+              safely_notify(update, ContextCard::UNSUPPORTED_CHANNEL)
+            end
+            return accepted
+          end
+
           authorized_update = @actor_authorizer.call(update)
           unless authorized_update
             @logger.warn("telegram_webhook actor_not_authorized")
@@ -113,7 +121,7 @@ module PrismBot
         end
 
         def safely_notify(update, text)
-          @message_sender.send_message(chat_id: update.chat_id, text: text)
+          @message_sender.send_message(**update.reply_target, text: text)
         rescue StandardError => error
           @logger.error("telegram_webhook notification_failed class=#{error.class.name}")
         end

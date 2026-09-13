@@ -6,6 +6,6 @@ A physical Telegram webhook process may serve many human workspaces. `/stop` the
 
 The Telegram adapter sends only immutable numeric user ID evidence as `provider=telegram`, `provider_scope=global`, `subject_id=<decimal user id>`. Prism Hub derives both the authenticated machine principal and personal workspace server-side.
 
-A central lifecycle gate protects ordinary command dispatch. `/start`, `/help`, `/status`, `/stop`, and `/resume` remain reachable while paused so a user can inspect or recover their own state. Other commands are blocked before their handler runs.
+A central lifecycle gate protects ordinary command dispatch. `/start`, `/help`, `/context`, `/status`, `/stop`, and `/resume` remain reachable while paused so a user can inspect or recover their own state. `/context`, like `/help`, bypasses the lifecycle lookup for local diagnostics even when the instance is disabled. It still requires Hub actor authorization and cannot publish, bind, or change lifecycle state. Other commands are blocked before their handler runs.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

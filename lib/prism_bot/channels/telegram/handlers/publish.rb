@@ -39,7 +39,7 @@ module PrismBot
               idempotency_key: "telegram:#{@instance_id}:#{update.update_id}"
             )
             @message_sender.send_message(
-              chat_id: update.chat_id,
+              **update.reply_target,
               text: @presenter.published(response, target_count: publication.targets.length)
             )
           end

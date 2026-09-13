@@ -27,7 +27,7 @@ class LifecycleGateTest < Minitest::Test
     lifecycle = FakeBotLifecycle.new(status: "paused")
     gate = build_gate(lifecycle)
 
-    %w[/start /help /status /stop /resume].each do |text|
+    %w[/start /help /context /status /stop /resume].each do |text|
       assert_nil gate.call(telegram_update(text: text))
     end
 
