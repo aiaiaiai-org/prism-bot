@@ -4,8 +4,6 @@ module PrismBot
   module Channels
     module Telegram
       class InteractionRouter
-        SURFACE = "telegram"
-
         def initialize(command_router:, state_handlers:, state_store:, instance_id:)
           @command_router = command_router
           @state_handlers = normalize_handlers(state_handlers)
@@ -43,7 +41,7 @@ module PrismBot
         def interaction_key(update)
           Domain::InteractionKey.new(
             instance_id: @instance_id,
-            surface: SURFACE,
+            surface: update.surface_context.interaction_scope,
             actor_ref: update.actor.canonical_ref
           )
         end

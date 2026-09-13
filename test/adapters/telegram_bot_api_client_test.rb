@@ -102,4 +102,24 @@ class TelegramBotApiClientTest < Minitest::Test
     assert_equal PrismBot::Adapters::Telegram::BotApiClient::MAX_MESSAGE_CHARACTERS, payload.fetch("text").length
     refute payload.key?("link_preview_options")
   end
+
+  def test_interactive_reply_includes_topic_without_enabling_markup
+    transport = success_transport
+    client(transport).send_message(chat_id: -100123, text: "<Context Card>", message_thread_id: 13)
+
+    payload = JSON.parse(transport.calls.fetch(0).fetch(:body))
+    assert_equal 13, payload.fetch("message_thread_id")
+    assert_equal "<Context Card>", payload.fetch("text")
+    refute payload.key?("parse_mode")
+  end
+
+  def test_invalid_reply_topic_never_reaches_transport
+    transport = success_transport
+    [0, -1, false, "13"].each do |thread_id|
+      assert_raises(PrismBot::InputError) do
+        client(transport).send_message(chat_id: -100123, text: "Hello", message_thread_id: thread_id)
+      end
+    end
+    assert_empty transport.calls
+  end
 end

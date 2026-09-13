@@ -25,6 +25,10 @@ module PrismBot
 
       def command_handlers(services, lifecycle)
         {
+          "context" => Channels::Telegram::Handlers::Context.new(
+            message_sender: services.message_sender,
+            presenter: @presenter
+          ),
           "help" => Channels::Telegram::Handlers::Help.new(
             message_sender: services.message_sender,
             presenter: @presenter

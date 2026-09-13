@@ -11,7 +11,7 @@ module PrismBot
           end
 
           def call(update:, arguments:)
-            @message_sender.send_message(chat_id: update.chat_id, text: @presenter.unknown)
+            @message_sender.send_message(**update.reply_target, text: @presenter.unknown)
           end
         end
       end

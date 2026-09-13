@@ -166,6 +166,12 @@ server-side.
 The normative ecosystem rules live in Prism's
 [`engineering-principles.md`](https://github.com/aiaiaiai-org/prism/blob/master/docs/engineering-principles.md).
 
+## Telegram context
+
+`/context` displays a Context Card for the current chat or topic; `/start` includes the same card. Shared replies preserve `message_thread_id`, and pending interactions are isolated by chat, topic, and canonical actor. Channel posts and anonymous chat senders do not become human identity evidence. Interactive channel management receives an explicit unsupported notice; outbound delivery to channels remains separate.
+
+See [Telegram SurfaceContext](docs/telegram-surface-context.md) for fields, supported updates, client integration, and the state-scope transition. A card does not imply a verified Hub binding.
+
 No public software license has been selected for this repository yet.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

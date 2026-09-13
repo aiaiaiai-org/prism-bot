@@ -85,7 +85,58 @@ class ClientCompositionTest < Minitest::Test
     refute_respond_to services, :hub_gateway
   end
 
+  def test_pending_interaction_is_isolated_by_chat_topic_and_actor
+    sender = FakeMessageSender.new
+    services = client_services(sender)
+    store = MemoryStateStore.new
+    capture = CapturePost.new
+    composition = PrismBot::Client::Default.new.call(services).with(
+      command_handlers: {"create_post" => BeginPost.new(sender: sender)},
+      state_handlers: {"awaiting_post_content" => capture},
+      state_store: store
+    )
+    router = interaction_router(composition, services)
+
+    router.call(scoped_update(text: "/create_post topic-13"))
+    router.call(scoped_update(text: "other topic", thread_id: 14))
+    router.call(scoped_update(text: "other chat", chat_id: -2002))
+    router.call(scoped_update(text: "chat root", thread_id: nil))
+    router.call(scoped_update(text: "other actor", actor_id: "someone-else"))
+    router.call(scoped_update(text: "/context"))
+    assert_empty capture.texts
+
+    router.call(scoped_update(text: "correct topic"))
+    assert_equal [["correct topic", "topic-13"]], capture.texts
+    router.call(scoped_update(text: "state already cleared"))
+    assert_equal 1, capture.texts.length
+  end
+
+  def test_start_includes_context_card_and_targets_same_topic
+    sender = FakeMessageSender.new
+    services = client_services(sender)
+    composition = PrismBot::Client::Default.new.call(services)
+
+    interaction_router(composition, services).call(scoped_update(text: "/start"))
+
+    message = sender.messages.fetch(0)
+    assert_equal 13, message.fetch("message_thread_id")
+    assert_includes message.fetch("text"), "Topic ID: 13"
+    assert_includes message.fetch("text"), "Публічний ID: 0x0sky"
+  end
+
   private
+
+  def scoped_update(text:, chat_id: -1001, thread_id: 13, actor_id: "0x0sky")
+    surface = PrismBot::Channels::Telegram::SurfaceContext.new(
+      chat_id: chat_id, chat_type: "supergroup", message_thread_id: thread_id
+    )
+    PrismBot::Channels::Telegram::AuthorizedUpdate.new(
+      update: PrismBot::Channels::Telegram::Update.new(
+        update_id: 42, chat_id: chat_id, user_id: 7, text: text, surface_context: surface
+      ),
+      actor: PrismBot::Domain::HumanActor.new(canonical_id: actor_id, role: "owner")
+    )
+  end
 
   def client_services(sender)
     PrismBot::Client::Services.new(
@@ -123,7 +174,7 @@ class ClientCompositionTest < Minitest::Test
   def interaction_key(services)
     PrismBot::Domain::InteractionKey.new(
       instance_id: services.instance_id,
-      surface: "telegram",
+      surface: "telegram:-1001:root",
       actor_ref: "person:0x0sky"
     )
   end

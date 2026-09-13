@@ -14,6 +14,9 @@ module PrismBot
         end
 
         def call(update)
+          return nil unless update.user_id
+          return nil if update.surface_context.chat_type == "channel"
+
           actor = actor_for(update)
           return nil unless actor
 

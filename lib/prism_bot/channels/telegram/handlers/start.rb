@@ -12,8 +12,8 @@ module PrismBot
 
           def call(update:, arguments:)
             @message_sender.send_message(
-              chat_id: update.chat_id,
-              text: @presenter.started(update.actor)
+              **update.reply_target,
+              text: [@presenter.context_card(update.surface_context), @presenter.started(update.actor)].join("\n\n")
             )
           end
         end

@@ -163,8 +163,10 @@ module PrismBotTestSupport
       @messages = []
     end
 
-    def send_message(chat_id:, text:)
-      @messages << {"chat_id" => chat_id, "text" => text}
+    def send_message(chat_id:, text:, message_thread_id: nil)
+      message = {"chat_id" => chat_id, "text" => text}
+      message["message_thread_id"] = message_thread_id if message_thread_id
+      @messages << message
     end
   end
 
@@ -283,7 +285,7 @@ module PrismBotTestSupport
     {
       "update_id" => update_id,
       "message" => {
-        "chat" => {"id" => chat_id},
+        "chat" => {"id" => chat_id, "type" => "supergroup"},
         "from" => {"id" => user_id},
         "text" => text
       }

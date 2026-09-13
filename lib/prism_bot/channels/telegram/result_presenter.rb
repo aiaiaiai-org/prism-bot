@@ -7,6 +7,7 @@ module PrismBot
         HELP = <<~TEXT.freeze
           Команди Prism Bot:
           /start — підключити себе до Prism
+          /context — контекст поточного чату або гілки
           /status — поточний стан бота
           /stop — призупинити бота для себе
           /resume — відновити призупиненого бота
@@ -19,6 +20,10 @@ module PrismBot
 
         def help
           HELP
+        end
+
+        def context_card(surface)
+          ContextCard.new.call(surface)
         end
 
         def started(actor)
