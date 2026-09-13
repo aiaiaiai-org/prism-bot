@@ -15,6 +15,15 @@ module PrismBot
   class TransportError < Error; end
   class MessageDeliveryError < TransportError; end
 
+  class DeliveryRateLimited < MessageDeliveryError
+    attr_reader :retry_after_seconds
+
+    def initialize(code, message, retry_after_seconds:)
+      super(code, message)
+      @retry_after_seconds = retry_after_seconds
+    end
+  end
+
   class HubError < Error
     attr_reader :http_status, :request_id
 
