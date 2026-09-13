@@ -4,7 +4,7 @@ module PrismBot
   module Channels
     module Telegram
       class LifecycleGate
-        BYPASS_COMMANDS = %w[start help status stop resume].freeze
+        BYPASS_COMMANDS = %w[start help context status stop resume].freeze
 
         def initialize(lifecycle:)
           @lifecycle = lifecycle

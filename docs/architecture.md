@@ -51,7 +51,7 @@ provider credentials.
 A client returns an immutable `PrismBot::Client::Composition` containing command
 handlers, state handlers, a fallback handler, presenter, and an explicit
 interaction-state store. `PrismBot::Client::Default` expresses the existing
-`/start`, `/help`, `/status`, `/stop`, `/resume`, `/channels`, and `/publish`
+`/start`, `/help`, `/context`, `/status`, `/stop`, `/resume`, `/channels`, and `/publish`
 behaviour using the same public contract. There is no parallel bootstrap path for
 the built-in client.
 
@@ -75,7 +75,9 @@ process-global conversation hash behind the API.
 Stateful conversations use `InteractionKey(instance_id, surface, actor_ref)`.
 For Telegram, `actor_ref` comes from the Hub-resolved canonical `HumanActor`, not
 Telegram username or chat label. The instance ID prevents two concrete bot
-products used by the same person from sharing accidental state.
+products used by the same person from sharing accidental state. The Telegram
+surface includes chat and optional topic IDs; see
+[SurfaceContext](telegram-surface-context.md) for state cleanup and migration.
 
 `InteractionState` is immutable and carries a validated state name plus
 JSON-compatible data. Handlers request state changes by returning an immutable

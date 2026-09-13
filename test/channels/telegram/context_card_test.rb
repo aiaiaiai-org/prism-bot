@@ -5,6 +5,76 @@ require_relative "../../test_helper"
 class TelegramContextCardTest < Minitest::Test
   include PrismBotTestSupport
 
+  def test_unicode_separators_cannot_forge_card_lines
+    ["\n", "\r", "\u2028", "\u2029", "\u0085", "\u00a0"].each do |separator|
+      surface = PrismBot::Channels::Telegram::SurfaceContext.new(
+        chat_id: -1001, chat_type: "supergroup",
+        title: "Engineering#{separator}Прив’язка Hub: перевірена"
+      )
+      card = PrismBot::Channels::Telegram::ContextCard.new.call(surface)
+
+      assert_equal 5, card.lines.length
+      assert_equal "Контекст: Engineering Прив’язка Hub: перевірена", card.lines[1].chomp
+      assert_equal "Прив’язка Hub: не перевірена", card.lines.last.chomp
+      refute_includes card, separator unless separator == "\n"
+    end
+  end
+
+  def test_default_allowlist_never_emits_channel_notices_or_calls_hub
+    sender = FakeMessageSender.new
+    resolver = FakeActorResolver.new
+    onboarder = FakeActorOnboarder.new
+    lifecycle = FakeBotLifecycle.new
+    router = RecordingRouter.new
+    app = webhook_app(
+      router: router, sender: sender, actor_resolver: resolver,
+      actor_onboarder: onboarder, bot_lifecycle: lifecycle
+    )
+
+    %w[/start /context /publish].each do |command|
+      payload = telegram_payload(text: command)
+      payload["channel_post"] = payload.delete("message")
+      payload["channel_post"]["chat"]["type"] = "channel"
+      payload["channel_post"].delete("from")
+      status, = app.call(webhook_environment(payload))
+      assert_equal 200, status
+    end
+
+    assert_empty sender.messages
+    assert_empty router.updates
+    assert_empty resolver.requests
+    assert_empty onboarder.requests
+    assert_empty lifecycle.requests
+  end
+
+  def test_context_bypasses_lifecycle_but_retains_actor_authorization
+    %w[paused disabled].each do |state|
+      lifecycle = FakeBotLifecycle.new(status: state)
+      resolver = FakeActorResolver.new
+      router = RecordingRouter.new
+      app = webhook_app(router: router, actor_resolver: resolver, bot_lifecycle: lifecycle)
+
+      app.call(webhook_environment(telegram_payload(text: "/context")))
+
+      assert_equal 1, resolver.requests.length
+      assert_equal 1, router.updates.length
+      assert_empty lifecycle.requests
+    end
+
+    sender = FakeMessageSender.new
+    router = RecordingRouter.new
+    lifecycle = FakeBotLifecycle.new(status: "paused")
+    app = webhook_app(
+      router: router, sender: sender, bot_lifecycle: lifecycle,
+      actor_resolver: FakeActorResolver.new(denied_subject_ids: [7])
+    )
+    app.call(webhook_environment(telegram_payload(text: "/context")))
+
+    assert_empty sender.messages
+    assert_empty router.updates
+    assert_empty lifecycle.requests
+  end
+
   def test_card_shows_surface_without_claiming_hub_binding_or_exposing_actor
     surface = PrismBot::Channels::Telegram::SurfaceContext.new(
       chat_id: -1001, chat_type: "supergroup", message_thread_id: 13,
@@ -46,7 +116,10 @@ class TelegramContextCardTest < Minitest::Test
     resolver = FakeActorResolver.new
     onboarder = FakeActorOnboarder.new
     router = RecordingRouter.new
-    app = webhook_app(router: router, sender: sender, actor_resolver: resolver, actor_onboarder: onboarder)
+    app = webhook_app(
+      router: router, sender: sender, actor_resolver: resolver, actor_onboarder: onboarder,
+      allowed_chat_ids: [-1001]
+    )
     payload = telegram_payload(text: "/context")
     payload["channel_post"] = payload.delete("message")
     payload["channel_post"]["chat"]["type"] = "channel"

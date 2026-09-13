@@ -83,7 +83,8 @@ module PrismBot
           end
 
           if update.surface_context.chat_type == "channel"
-            if %w[start context].include?(Command.parse(update.text)&.name)
+            if @context_policy.explicitly_allowed?(update) &&
+                %w[start context].include?(Command.parse(update.text)&.name)
               safely_notify(update, ContextCard::UNSUPPORTED_CHANNEL)
             end
             return accepted

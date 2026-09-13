@@ -4,6 +4,9 @@
 
 ### Added
 
+- Telegram SurfaceContext and `/context` cards with topic-preserving replies.
+- Actor-authorized local context diagnostics available while paused or disabled.
+
 - Modular Telegram webhook foundation.
 - Generated Prism Hub API client and pinned contract.
 - Multi-channel text publication command.
@@ -19,6 +22,10 @@
 - Interaction routing that preserves command priority while deterministically routing ordinary follow-up messages.
 
 ### Changed
+
+- Interaction state is isolated by chat, topic, and canonical actor; old provider-only state must restart and be cleaned up by the store operator.
+- Channel notices require an explicit chat allowlist; the default emits no channel replies.
+- Context Card titles normalize Unicode whitespace to prevent forged lines.
 
 - Telegram user authorization now resolves through Prism Hub identity bindings;
   the former local user allow-list is rejected at configuration time.

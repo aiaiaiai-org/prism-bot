@@ -12,6 +12,8 @@ module PrismBot
           unless chat_id.is_a?(Integer) && !chat_id.zero? && CHAT_TYPES.include?(chat_type)
             raise InputError.new("bot.telegram.surface.invalid", "Telegram surface is invalid")
           end
+          # Bot API topics also exist in private chats of bots with forum topic mode enabled.
+          # https://core.telegram.org/bots/api#sendmessage
           if !message_thread_id.nil? &&
               (!message_thread_id.is_a?(Integer) || !message_thread_id.positive? ||
               !%w[private supergroup].include?(chat_type))

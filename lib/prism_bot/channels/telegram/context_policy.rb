@@ -9,7 +9,11 @@ module PrismBot
         end
 
         def allowed?(update)
-          @allowed_chat_ids.empty? || @allowed_chat_ids.include?(update.chat_id)
+          @allowed_chat_ids.empty? || explicitly_allowed?(update)
+        end
+
+        def explicitly_allowed?(update)
+          @allowed_chat_ids.include?(update.chat_id)
         end
 
         private

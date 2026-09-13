@@ -55,7 +55,7 @@ module PrismBot
         def lifecycle_blocked(state)
           validate_lifecycle_state!(state)
           if state.paused?
-            "Prism Bot призупинено. Доступні /status, /resume та /help."
+            "Prism Bot призупинено. Доступні /status, /resume, /help та /context."
           else
             "Prism Bot вимкнено. /status покаже поточний стан; звичайний /resume недоступний."
           end
