@@ -168,7 +168,7 @@ The normative ecosystem rules live in Prism's
 
 ## Telegram context
 
-`/context` displays a Context Card for the current chat or topic; `/start` includes the same card. Shared replies preserve `message_thread_id`, and pending interactions are isolated by chat, topic, and canonical actor. Channel posts and anonymous chat senders do not become human identity evidence. Interactive channel management receives an explicit unsupported notice; outbound delivery to channels remains separate.
+`/context` displays a Context Card for the current chat or topic; `/start` includes the same card. Shared replies preserve `message_thread_id`, and pending interactions are isolated by chat, topic, and canonical actor. Channel posts and anonymous chat senders do not become human identity evidence. Interactive channel management receives an explicit unsupported notice in chats an operator has enumerated, and silence otherwise; outbound delivery to channels remains separate.
 
 See [Telegram SurfaceContext](docs/telegram-surface-context.md) for fields, supported updates, client integration, and the state-scope transition. A card does not imply a verified Hub binding.
 

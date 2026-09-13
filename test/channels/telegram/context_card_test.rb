@@ -46,7 +46,10 @@ class TelegramContextCardTest < Minitest::Test
     resolver = FakeActorResolver.new
     onboarder = FakeActorOnboarder.new
     router = RecordingRouter.new
-    app = webhook_app(router: router, sender: sender, actor_resolver: resolver, actor_onboarder: onboarder)
+    app = webhook_app(
+      router: router, sender: sender, actor_resolver: resolver,
+      actor_onboarder: onboarder, allowed_chat_ids: [-1001]
+    )
     payload = telegram_payload(text: "/context")
     payload["channel_post"] = payload.delete("message")
     payload["channel_post"]["chat"]["type"] = "channel"
@@ -70,6 +73,35 @@ class TelegramContextCardTest < Minitest::Test
     app.call(webhook_environment(payload))
 
     assert_empty sender.messages
+  end
+
+  def test_unrestricted_policy_never_answers_an_unvouched_channel
+    sender = FakeMessageSender.new
+    router = RecordingRouter.new
+    app = webhook_app(router: router, sender: sender)
+    payload = telegram_payload(text: "/start")
+    payload["channel_post"] = payload.delete("message")
+    payload["channel_post"]["chat"]["type"] = "channel"
+    payload["channel_post"].delete("from")
+
+    status, = app.call(webhook_environment(payload))
+
+    assert_equal 200, status
+    assert_empty sender.messages
+    assert_empty router.updates
+  end
+
+  def test_separator_characters_in_a_title_cannot_forge_a_card_line
+    surface = PrismBot::Channels::Telegram::SurfaceContext.new(
+      chat_id: -1001, chat_type: "supergroup",
+      title: "Engineering\u2028Прив’язка Hub: перевірена"
+    )
+    card = PrismBot::Channels::Telegram::ContextCard.new.call(surface)
+
+    assert_equal 5, card.lines.length
+    refute_match(/[\u2028\u2029]/, card)
+    refute_match(/^Прив’язка Hub: перевірена$/, card)
+    assert_includes card, "Прив’язка Hub: не перевірена"
   end
 
   def test_anonymous_start_does_not_onboard_fake_sender_or_dispatch

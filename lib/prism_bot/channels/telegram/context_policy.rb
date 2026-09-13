@@ -12,6 +12,13 @@ module PrismBot
           @allowed_chat_ids.empty? || @allowed_chat_ids.include?(update.chat_id)
         end
 
+        # True only when an operator enumerated the chats this bot serves.
+        # An unrestricted policy vouches for nobody, so callers must not treat
+        # an unlisted chat as trusted enough to answer.
+        def restricted?
+          !@allowed_chat_ids.empty?
+        end
+
         private
 
         def normalize(values)

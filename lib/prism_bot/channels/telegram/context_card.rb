@@ -20,7 +20,7 @@ module PrismBot
             raise ArgumentError, "surface must be a Telegram::SurfaceContext"
           end
 
-          title = surface.title.to_s.gsub(/[[:cntrl:]]/, " ").strip[0, 128]
+          title = surface.title.to_s.gsub(/[[:cntrl:][:space:]]/, " ").strip[0, 128]
           label = title.empty? ? LABELS.fetch(surface.kind) : title
           lines = ["Prism", "Контекст: #{label}", "Тип: #{LABELS.fetch(surface.kind)}", "Chat ID: #{surface.chat_id}"]
           lines << "Topic ID: #{surface.message_thread_id}" if surface.message_thread_id

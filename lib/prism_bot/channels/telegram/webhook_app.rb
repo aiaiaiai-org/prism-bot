@@ -83,9 +83,7 @@ module PrismBot
           end
 
           if update.surface_context.chat_type == "channel"
-            if %w[start context].include?(Command.parse(update.text)&.name)
-              safely_notify(update, ContextCard::UNSUPPORTED_CHANNEL)
-            end
+            notify_unsupported_channel(update)
             return accepted
           end
 
@@ -117,6 +115,18 @@ module PrismBot
           @logger.error("telegram_webhook unexpected_error class=#{error.class.name}")
           safely_notify(authorized_update, @presenter.error(error)) if authorized_update
           accepted
+        end
+
+        # Channel posts reach this point with no human identity and no Hub
+        # lookup behind them, so the notice is the only reply the bot can send
+        # before authorization. Restrict it to chats an operator enumerated;
+        # otherwise any channel the bot administers could drive unbounded
+        # sendMessage calls out of the shared rate budget by repeating /start.
+        def notify_unsupported_channel(update)
+          return unless @context_policy.restricted?
+          return unless %w[start context].include?(Command.parse(update.text)&.name)
+
+          safely_notify(update, ContextCard::UNSUPPORTED_CHANNEL)
         end
 
         def safely_notify(update, text)
