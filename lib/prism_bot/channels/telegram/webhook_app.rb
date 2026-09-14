@@ -19,7 +19,8 @@ module PrismBot
           message_sender:,
           presenter:,
           logger:,
-          max_body_bytes:
+          max_body_bytes:,
+          delivery_endpoint: nil
         )
           @secret = secret
           @update_parser = update_parser
@@ -31,6 +32,7 @@ module PrismBot
           @presenter = presenter
           @logger = logger
           @max_body_bytes = Integer(max_body_bytes)
+          @delivery_endpoint = delivery_endpoint
           if @max_body_bytes <= 0
             raise ConfigurationError.new(
               "bot.telegram.max_body.invalid",
@@ -44,6 +46,9 @@ module PrismBot
           path = environment.fetch("PATH_INFO")
           if method == "GET" && path == "/healthz"
             return response(200, "status" => "ok", "service" => "prism-bot")
+          end
+          if @delivery_endpoint && method == "POST" && path == "/api/v1/delivery"
+            return @delivery_endpoint.call(environment)
           end
           unless method == "POST" && path == "/telegram/webhook"
             return response(
