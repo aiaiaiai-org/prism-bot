@@ -17,6 +17,7 @@ This foundation provides:
   human identity authorization;
 - bounded traversal of Hub channel pages with validated publishing capabilities;
 - verified Telegram webhook ingress and a focused Bot API sender adapter;
+- an authenticated service-to-service outbound delivery endpoint for Hub-to-Telegram dispatch;
 - extensible interaction routing with `/help`, `/channels`, lifecycle, and
   text-only `/publish` handlers;
 - channel-independent use cases and immutable domain values;
@@ -40,12 +41,22 @@ flowchart TD
     Commands --> UseCases["Channel-independent use cases"]
     UseCases --> Ports["Lifecycle / channel catalog / publication ports"]
     HubAdapter --> Ports
+    Hub --> Delivery["POST /api/v1/delivery"]
+    Delivery --> TelegramAPI["Telegram Bot API"]
 ```
 
-The bot holds only a Hub API token and its Telegram bot token. Provider
-credentials remain in Hub/runtime infrastructure. Concrete products receive
-safe use cases and non-secret defaults through `PrismBot::Client::Services`; they
-do not receive Hub/Telegram credentials, transport objects, or `HubGateway`.
+The bot holds only a Hub API token, its Telegram bot token, and a dedicated
+service-to-service delivery secret. Provider credentials remain in Hub/runtime
+infrastructure. Concrete products receive safe use cases and non-secret defaults
+through `PrismBot::Client::Services`; they do not receive Hub/Telegram
+credentials, transport objects, or `HubGateway`.
+
+The outbound delivery endpoint is an infrastructure boundary for `prism-hub`.
+It accepts a resolved Telegram `chat_id`, optional `message_thread_id`, rendered
+text, and deterministic `idempotency_key`. It authenticates with
+`X-Prism-Bot-Delivery-Secret` and delegates delivery to the existing
+`Ports::OutboundDelivery` implementation. Hub owns logical-channel-to-surface
+resolution; Prism Bot owns Telegram transport and provider credentials.
 
 Telegram numeric user IDs are converted to opaque provider-subject strings only
 at the Telegram adapter boundary. Prism Hub resolves that evidence into a
@@ -133,9 +144,13 @@ allows any chat context to proceed to Hub authorization. It never authorizes a
 Telegram user. The removed `PRISM_BOT_TELEGRAM_ALLOWED_USER_IDS` setting is
 rejected at boot.
 
-Both the Telegram webhook secret and Hub API token must contain at least 32
-characters. `PRISM_BOT_DEFAULT_CHANNEL_IDS` is a JSON array of public Hub channel
-IDs. `PRISM_BOT_DISPATCH_POLICY` is either `require_all_valid` (default) or
+The Telegram webhook secret, outbound delivery secret, and Hub API token must
+contain at least 32 characters. `PRISM_BOT_DELIVERY_SECRET` is used only for
+Hub-to-bot service authentication and is separate from Telegram's webhook
+`secret_token` and the Hub API token.
+
+`PRISM_BOT_DEFAULT_CHANNEL_IDS` is a JSON array of public Hub channel IDs.
+`PRISM_BOT_DISPATCH_POLICY` is either `require_all_valid` (default) or
 `independent`.
 
 Run the default webhook application with:
@@ -147,6 +162,8 @@ bundle exec puma -C config/puma.rb
 
 Register `/telegram/webhook` with Telegram and set the same secret as
 `PRISM_BOT_TELEGRAM_WEBHOOK_SECRET` through Telegram's `secret_token` setting.
+Hub-to-bot delivery uses `POST /api/v1/delivery` with
+`X-Prism-Bot-Delivery-Secret: $PRISM_BOT_DELIVERY_SECRET`.
 
 ## Verification
 
