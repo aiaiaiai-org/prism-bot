@@ -52,6 +52,14 @@ module PrismBot
         state_store: composition.state_store,
         instance_id: configuration.instance_id
       )
+      delivery_endpoint = Interfaces::HTTP::OutboundDeliveryEndpoint.new(
+        secret: Interfaces::HTTP::SharedSecret.new(
+          configuration.delivery_secret,
+          code: "bot.delivery.secret.invalid"
+        ),
+        message_sender: message_sender,
+        max_body_bytes: configuration.max_webhook_bytes
+      )
 
       Channels::Telegram::WebhookApp.new(
         secret: Channels::Telegram::WebhookSecret.new(
@@ -70,7 +78,8 @@ module PrismBot
         message_sender: message_sender,
         presenter: composition.presenter,
         logger: logger,
-        max_body_bytes: configuration.max_webhook_bytes
+        max_body_bytes: configuration.max_webhook_bytes,
+        delivery_endpoint: delivery_endpoint
       )
     end
   end
