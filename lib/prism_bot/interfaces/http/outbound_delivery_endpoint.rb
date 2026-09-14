@@ -70,8 +70,6 @@ module PrismBot
           )
         rescue MessageDeliveryError => error
           response(502, "status" => "error", "error" => {"code" => error.code})
-        rescue KeyError
-          response(400, "status" => "error", "error" => {"code" => "bot.request.invalid"})
         end
 
         private
