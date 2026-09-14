@@ -9,6 +9,7 @@ module PrismBot
     attr_reader :instance_id,
       :telegram_token,
       :telegram_webhook_secret,
+      :delivery_secret,
       :allowed_chat_ids,
       :default_channel_ids,
       :default_locale,
@@ -27,6 +28,7 @@ module PrismBot
         environment,
         "PRISM_BOT_TELEGRAM_WEBHOOK_SECRET"
       )
+      @delivery_secret = required(environment, "PRISM_BOT_DELIVERY_SECRET")
       @allowed_chat_ids = integer_array(environment, "PRISM_BOT_TELEGRAM_ALLOWED_CHAT_IDS")
       @default_channel_ids = string_array(environment, "PRISM_BOT_DEFAULT_CHANNEL_IDS")
       @default_locale = environment.fetch("PRISM_BOT_DEFAULT_LOCALE", "uk-UA").strip.freeze
