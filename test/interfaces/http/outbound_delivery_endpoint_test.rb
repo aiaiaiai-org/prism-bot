@@ -93,6 +93,31 @@ class OutboundDeliveryEndpointTest < Minitest::Test
     assert_equal 17, JSON.parse(response.body).dig("error", "retry_after_seconds")
   end
 
+  def test_sender_input_rejection_is_terminal_rather_than_retryable
+    app = PrismBot::Interfaces::HTTP::OutboundDeliveryEndpoint.new(
+      secret: PrismBot::Interfaces::HTTP::SharedSecret.new("d" * 32),
+      message_sender: PrismBot::Adapters::Telegram::BotApiClient.new(
+        token: "test-token",
+        transport: ->(**) { flunk("an oversized payload must never reach Telegram") }
+      ),
+      max_body_bytes: 262_144
+    )
+
+    response = Rack::MockRequest.new(app).post(
+      "/api/v1/delivery",
+      "CONTENT_TYPE" => "application/json",
+      "HTTP_X_PRISM_BOT_DELIVERY_SECRET" => "d" * 32,
+      input: JSON.generate(
+        "chat_id" => -100123,
+        "text" => "x" * (PrismBot::Adapters::Telegram::BotApiClient::MAX_MESSAGE_CHARACTERS + 1),
+        "idempotency_key" => "delivery-1"
+      )
+    )
+
+    assert_equal 400, response.status
+    assert_equal "bot.telegram.delivery.invalid", JSON.parse(response.body).dig("error", "code")
+  end
+
   private
 
   def request(secret, body)

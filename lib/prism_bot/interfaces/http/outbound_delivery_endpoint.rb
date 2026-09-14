@@ -59,6 +59,11 @@ module PrismBot
           response(400, "status" => "error", "error" => {"code" => "bot.json.invalid"})
         rescue KeyError, ArgumentError, TypeError
           response(400, "status" => "error", "error" => {"code" => "bot.delivery.request.invalid"})
+        rescue InputError => error
+          # A payload this sender rejects is permanently invalid, not a transient failure.
+          # Hub maps 400 to a terminal outbox failure and any 5xx to a retry, so letting
+          # this escape as a 500 would put an unsendable message into an endless retry loop.
+          response(400, "status" => "error", "error" => {"code" => error.code})
         rescue DeliveryRateLimited => error
           response(
             429,
