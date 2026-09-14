@@ -20,12 +20,12 @@ class BootstrapTest < Minitest::Test
     assert_equal "prism-bot", JSON.parse(response.body).fetch("service")
   end
 
-  def test_outbound_delivery_route_is_wired
+  def test_outbound_delivery_route_is_wired_and_authenticated
     app = PrismBot::Bootstrap.build(env: environment, logger: Logger.new(StringIO.new))
     response = Rack::MockRequest.new(app).post(
       "/api/v1/delivery",
       "CONTENT_TYPE" => "application/json",
-      "HTTP_X_PRISM_BOT_DELIVERY_SECRET" => "d" * 32,
+      "HTTP_X_PRISM_BOT_DELIVERY_SECRET" => "x" * 32,
       input: JSON.generate(
         "chat_id" => -100123,
         "text" => "Hello",
@@ -33,8 +33,8 @@ class BootstrapTest < Minitest::Test
       )
     )
 
-    assert_equal 200, response.status
-    assert_equal "ok", JSON.parse(response.body).fetch("status")
+    assert_equal 401, response.status
+    assert_equal "bot.delivery.secret.invalid", JSON.parse(response.body).dig("error", "code")
   end
 
   def test_custom_client_receives_only_safe_composition_services
@@ -66,7 +66,7 @@ class BootstrapTest < Minitest::Test
       "PRISM_BOT_DEFAULT_VOICE_PROFILE" => "0x0sky.uk_SP",
       "PRISM_BOT_DISPATCH_POLICY" => "require_all_valid",
       "PRISM_HUB_BASE_URL" => "https://hub.example.test",
-      "PRISM_HUB_API_TOKEN" => "h" * 32,
+      "PRISM_BOT_HUB_API_TOKEN" => "h" * 32,
       "PRISM_BOT_MAX_WEBHOOK_BYTES" => "1048576",
       "PRISM_BOT_ALLOW_INSECURE_HTTP" => "false"
     }
