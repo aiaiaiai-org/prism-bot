@@ -66,7 +66,7 @@ class BootstrapTest < Minitest::Test
       "PRISM_BOT_DEFAULT_VOICE_PROFILE" => "0x0sky.uk_SP",
       "PRISM_BOT_DISPATCH_POLICY" => "require_all_valid",
       "PRISM_HUB_BASE_URL" => "https://hub.example.test",
-      "PRISM_BOT_HUB_API_TOKEN" => "h" * 32,
+      "PRISM_HUB_API_TOKEN" => "h" * 32,
       "PRISM_BOT_MAX_WEBHOOK_BYTES" => "1048576",
       "PRISM_BOT_ALLOW_INSECURE_HTTP" => "false"
     }
