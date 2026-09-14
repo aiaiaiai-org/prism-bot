@@ -20,6 +20,23 @@ class BootstrapTest < Minitest::Test
     assert_equal "prism-bot", JSON.parse(response.body).fetch("service")
   end
 
+  def test_outbound_delivery_route_is_wired_and_authenticated
+    app = PrismBot::Bootstrap.build(env: environment, logger: Logger.new(StringIO.new))
+    response = Rack::MockRequest.new(app).post(
+      "/api/v1/delivery",
+      "CONTENT_TYPE" => "application/json",
+      "HTTP_X_PRISM_BOT_DELIVERY_SECRET" => "x" * 32,
+      input: JSON.generate(
+        "chat_id" => -100123,
+        "text" => "Hello",
+        "idempotency_key" => "delivery-bootstrap"
+      )
+    )
+
+    assert_equal 401, response.status
+    assert_equal "bot.delivery.secret.invalid", JSON.parse(response.body).dig("error", "code")
+  end
+
   def test_custom_client_receives_only_safe_composition_services
     client = CapturingClient.new
 
@@ -42,6 +59,7 @@ class BootstrapTest < Minitest::Test
       "PRISM_BOT_INSTANCE_ID" => "test-client",
       "PRISM_BOT_TELEGRAM_TOKEN" => "telegram-test-token",
       "PRISM_BOT_TELEGRAM_WEBHOOK_SECRET" => "w" * 32,
+      "PRISM_BOT_DELIVERY_SECRET" => "d" * 32,
       "PRISM_BOT_TELEGRAM_ALLOWED_CHAT_IDS" => "[]",
       "PRISM_BOT_DEFAULT_CHANNEL_IDS" => "[]",
       "PRISM_BOT_DEFAULT_LOCALE" => "uk-UA",

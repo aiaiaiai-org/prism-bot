@@ -8,6 +8,7 @@ class ConfigurationTest < Minitest::Test
       "PRISM_BOT_INSTANCE_ID" => "personal-bot",
       "PRISM_BOT_TELEGRAM_TOKEN" => "telegram-token",
       "PRISM_BOT_TELEGRAM_WEBHOOK_SECRET" => "a" * 32,
+      "PRISM_BOT_DELIVERY_SECRET" => "c" * 32,
       "PRISM_BOT_TELEGRAM_ALLOWED_CHAT_IDS" => "[-1001]",
       "PRISM_BOT_DEFAULT_CHANNEL_IDS" => '["personal-threads"]',
       "PRISM_HUB_BASE_URL" => "https://hub.example.test",
@@ -16,6 +17,7 @@ class ConfigurationTest < Minitest::Test
 
     assert_equal [-1001], configuration.allowed_chat_ids
     assert_equal ["personal-threads"], configuration.default_channel_ids
+    assert_equal "c" * 32, configuration.delivery_secret
     refute configuration.allow_insecure_http
   end
 
@@ -48,6 +50,7 @@ class ConfigurationTest < Minitest::Test
       "PRISM_BOT_INSTANCE_ID" => "personal-bot",
       "PRISM_BOT_TELEGRAM_TOKEN" => "telegram-token",
       "PRISM_BOT_TELEGRAM_WEBHOOK_SECRET" => "a" * 32,
+      "PRISM_BOT_DELIVERY_SECRET" => "c" * 32,
       "PRISM_HUB_BASE_URL" => "https://hub.example.test",
       "PRISM_HUB_API_TOKEN" => "b" * 32
     }

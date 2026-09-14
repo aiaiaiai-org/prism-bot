@@ -44,6 +44,9 @@ require_relative "prism_bot/adapters/hub_gateway"
 require_relative "prism_bot/adapters/null_interaction_state_store"
 require_relative "prism_bot/adapters/telegram/bot_api_client"
 
+require_relative "prism_bot/interfaces/http/shared_secret"
+require_relative "prism_bot/interfaces/http/outbound_delivery_endpoint"
+
 require_relative "prism_bot/channels/telegram/surface_context"
 require_relative "prism_bot/channels/telegram/context_card"
 require_relative "prism_bot/channels/telegram/update"
