@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- Pinned Hub contract moved from `0.1.0-alpha.8` to `0.1.0-alpha.10` (Hub `7462ba7`). The
+  additions are alert subscriptions (`alert_subscriptions:*`) and the Telegram surface bind
+  endpoint with an optional `bot_instance_id`. This bot uses none of them, so the generated
+  client changes only in its contract digest, and no operation it calls was altered.
+
 ### Added
 
 - Telegram SurfaceContext and `/context` cards with topic-preserving replies.

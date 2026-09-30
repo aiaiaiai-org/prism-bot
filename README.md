@@ -175,7 +175,7 @@ bundle exec rake check
 ```
 
 The Hub contract is pinned in `contracts/prism-hub.v1.source.yaml`; the current
-client contract is Hub `0.1.0-alpha.8`. Generated code is never edited as an
+client contract is Hub `0.1.0-alpha.10`. Generated code is never edited as an
 independent source of truth: `script/generate_hub_client --check` proves it
 matches the pinned contract and generator. Lifecycle responses are reduced to a
 single public state; internal Hub principal, workspace, and bot-instance IDs stay

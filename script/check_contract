@@ -15,7 +15,7 @@ source = YAML.safe_load_file(source_path, aliases: false).fetch("source")
 actual_digest = Digest::SHA256.hexdigest(contract_source)
 raise "pinned Hub contract digest drift" unless source.fetch("sha256") == actual_digest
 raise "OpenAPI version drift" unless contract.fetch("openapi") == "3.1.0"
-raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.8"
+raise "Hub client-readiness contract drift" unless contract.dig("info", "version") == "0.1.0-alpha.10"
 
 expected_operations = {
   ["/api/v1/actors/resolve", "post"] => "resolveActor",
