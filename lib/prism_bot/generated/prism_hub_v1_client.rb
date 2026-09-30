@@ -4,7 +4,7 @@
 module PrismBot
   module Generated
     class PrismHubV1Client
-      CONTRACT_SHA256 = "5f5b3c45ad9d406a3dfe274adbde2553f517bb13cc9bb4be61efcdd0f362c517"
+      CONTRACT_SHA256 = "b293ad3ab209be0c6a80fb8ad9d938c2e1c9fbb0268b631818fad1e11c55e7de"
       GET_PERSONAL_BOT_STATUS_PATH = "/api/v1/bot-instances/personal/status"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       ONBOARD_ACTOR_PATH = "/api/v1/actors/onboard"

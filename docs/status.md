@@ -27,7 +27,7 @@
   priority over pending state.
 - Default Prism Bot behaviour implemented through the same composition API used
   by external clients.
-- Generated Prism Hub v1 client pinned byte-for-byte to Hub `0.1.0-alpha.8`,
+- Generated Prism Hub v1 client pinned byte-for-byte to Hub `0.1.0-alpha.10`,
   including onboarding, personal actor resolution, and lifecycle operations.
 - Bounded channel pagination, capability validation, actor/lifecycle response
   validation, and correlated Hub errors.
