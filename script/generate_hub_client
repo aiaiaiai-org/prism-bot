@@ -21,8 +21,6 @@ end
 
 required = %w[
   bindTelegramSurface
-  clearPersonalAlertSubscription
-  getPersonalAlertSubscription
   getPersonalBotStatus
   listChannels
   onboardActor
@@ -31,11 +29,12 @@ required = %w[
   resolveActor
   resolvePersonalActor
   resumePersonalBot
-  savePersonalAlertSubscription
   validatePublication
 ]
 missing = required - operations.keys
 abort "missing Hub operations: #{missing.join(', ')}" if missing.any?
+
+post_paths = contract.fetch("paths").select { |_path, methods| methods.key?("post") }.keys.sort
 
 template = <<~'RUBY'
   # © 2026 aiaiaiai · aiaiaiai.org
@@ -46,8 +45,6 @@ template = <<~'RUBY'
       class PrismHubV1Client
         CONTRACT_SHA256 = "%<digest>s"
         BIND_TELEGRAM_SURFACE_PATH = %<bind_surface_path>s
-        CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<clear_alert_path>s
-        GET_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<get_alert_path>s
         GET_PERSONAL_BOT_STATUS_PATH = %<status_path>s
         LIST_CHANNELS_PATH = %<list_path>s
         ONBOARD_ACTOR_PATH = %<onboard_actor_path>s
@@ -56,8 +53,9 @@ template = <<~'RUBY'
         RESOLVE_ACTOR_PATH = %<resolve_actor_path>s
         RESOLVE_PERSONAL_ACTOR_PATH = %<resolve_personal_actor_path>s
         RESUME_PERSONAL_BOT_PATH = %<resume_path>s
-        SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<save_alert_path>s
         VALIDATE_PUBLICATION_PATH = %<validate_path>s
+        # Every POST path of the pinned contract. A client product may reach only these.
+        POST_PATHS = %<post_paths>s.freeze
 
         def initialize(base_url:, token:, transport:)
           unless token.is_a?(String) && token.length >= 32
@@ -92,19 +90,17 @@ template = <<~'RUBY'
           request("POST", BIND_TELEGRAM_SURFACE_PATH, payload: payload)
         end
 
-        def clear_personal_alert_subscription(provider:, provider_scope:, subject_id:)
-          request(
-            "POST",
-            CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-            payload: provider_subject_payload(provider, provider_scope, subject_id)
-          )
-        end
+        # A POST of a person's provider evidence plus product fields to an operation the pinned
+        # contract declares. The path is checked against the contract, never built from input.
+        def personal_call(path:, provider:, provider_scope:, subject_id:, fields: {})
+          unless POST_PATHS.include?(path)
+            raise InputError.new("bot.hub.operation.unknown", "Prism Hub operation is not in the pinned contract")
+          end
 
-        def get_personal_alert_subscription(provider:, provider_scope:, subject_id:)
           request(
             "POST",
-            GET_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-            payload: provider_subject_payload(provider, provider_scope, subject_id)
+            path,
+            payload: provider_subject_payload(provider, provider_scope, subject_id).merge(fields.to_h)
           )
         end
 
@@ -161,25 +157,6 @@ template = <<~'RUBY'
             "POST",
             RESUME_PERSONAL_BOT_PATH,
             payload: provider_subject_payload(provider, provider_scope, subject_id)
-          )
-        end
-
-        def save_personal_alert_subscription(
-          provider:,
-          provider_scope:,
-          subject_id:,
-          cell:,
-          categories:,
-          include_nearby:
-        )
-          request(
-            "POST",
-            SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-            payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
-              "cell" => cell,
-              "categories" => categories,
-              "include_nearby" => include_nearby
-            )
           )
         end
 
@@ -261,8 +238,7 @@ generated = format(
   template,
   digest: Digest::SHA256.hexdigest(contract_source),
   bind_surface_path: operations.fetch("bindTelegramSurface").inspect,
-  clear_alert_path: operations.fetch("clearPersonalAlertSubscription").inspect,
-  get_alert_path: operations.fetch("getPersonalAlertSubscription").inspect,
+  post_paths: post_paths.inspect,
   status_path: operations.fetch("getPersonalBotStatus").inspect,
   list_path: operations.fetch("listChannels").inspect,
   onboard_actor_path: operations.fetch("onboardActor").inspect,
@@ -271,7 +247,6 @@ generated = format(
   resolve_actor_path: operations.fetch("resolveActor").inspect,
   resolve_personal_actor_path: operations.fetch("resolvePersonalActor").inspect,
   resume_path: operations.fetch("resumePersonalBot").inspect,
-  save_alert_path: operations.fetch("savePersonalAlertSubscription").inspect,
   validate_path: operations.fetch("validatePublication").inspect
 )
 

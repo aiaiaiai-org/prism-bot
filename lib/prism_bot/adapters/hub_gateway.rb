@@ -9,9 +9,9 @@ module PrismBot
 
       include Ports::ActorOnboarder
       include Ports::ActorResolver
-      include Ports::AlertSubscriptions
       include Ports::BotLifecycle
       include Ports::ChannelCatalog
+      include Ports::PersonalHubCall
       include Ports::PublicationPublisher
       include Ports::SurfaceBinding
 
@@ -69,34 +69,14 @@ module PrismBot
         )
       end
 
-      def alert_status(provider:, provider_scope:, subject_id:)
-        resolve_alert_subscription(
-          @client.get_personal_alert_subscription(
-            provider: provider,
-            provider_scope: provider_scope,
-            subject_id: subject_id
-          )
-        )
-      end
-
-      def save_alert(provider:, provider_scope:, subject_id:, subscription:)
-        resolve_alert_subscription(
-          @client.save_personal_alert_subscription(
-            provider: provider,
-            provider_scope: provider_scope,
-            subject_id: subject_id,
-            **subscription.to_h
-          )
-        )
-      end
-
-      def clear_alert(provider:, provider_scope:, subject_id:)
-        @client.clear_personal_alert_subscription(
+      def personal_call(path:, provider:, provider_scope:, subject_id:, fields: {})
+        @client.personal_call(
+          path: path,
           provider: provider,
           provider_scope: provider_scope,
-          subject_id: subject_id
+          subject_id: subject_id,
+          fields: fields
         )
-        nil
       end
 
       def bind_surface(provider:, provider_scope:, subject_id:, logical_channel:, chat_id:, message_thread_id: nil)
@@ -162,22 +142,6 @@ module PrismBot
       end
 
       private
-
-      def resolve_alert_subscription(response)
-        value = response.fetch("alert_subscription")
-        return nil if value.nil?
-
-        Domain::AlertSubscription.new(
-          cell: value.fetch("cell"),
-          categories: value.fetch("categories"),
-          include_nearby: value.fetch("include_nearby")
-        )
-      rescue InputError, KeyError, TypeError
-        raise TransportError.new(
-          "bot.hub.alerts.response.invalid",
-          "Prism Hub returned an invalid alert subscription response"
-        )
-      end
 
       def personal_workspace_id(response)
         workspace_id = response.fetch("actor").fetch("workspace_id")

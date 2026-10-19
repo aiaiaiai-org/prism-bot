@@ -6,8 +6,6 @@ module PrismBot
     class PrismHubV1Client
       CONTRACT_SHA256 = "b293ad3ab209be0c6a80fb8ad9d938c2e1c9fbb0268b631818fad1e11c55e7de"
       BIND_TELEGRAM_SURFACE_PATH = "/api/v1/telegram/surfaces/bind"
-      CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/clear"
-      GET_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/status"
       GET_PERSONAL_BOT_STATUS_PATH = "/api/v1/bot-instances/personal/status"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       ONBOARD_ACTOR_PATH = "/api/v1/actors/onboard"
@@ -16,8 +14,9 @@ module PrismBot
       RESOLVE_ACTOR_PATH = "/api/v1/actors/resolve"
       RESOLVE_PERSONAL_ACTOR_PATH = "/api/v1/actors/personal/resolve"
       RESUME_PERSONAL_BOT_PATH = "/api/v1/bot-instances/personal/resume"
-      SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/save"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
+      # Every POST path of the pinned contract. A client product may reach only these.
+      POST_PATHS = ["/api/v1/actors/onboard", "/api/v1/actors/personal/resolve", "/api/v1/actors/resolve", "/api/v1/alert-subscriptions/personal/clear", "/api/v1/alert-subscriptions/personal/save", "/api/v1/alert-subscriptions/personal/status", "/api/v1/bot-instances/personal/pause", "/api/v1/bot-instances/personal/resume", "/api/v1/bot-instances/personal/status", "/api/v1/publications", "/api/v1/publications/validate", "/api/v1/telegram/surfaces/bind"].freeze
 
       def initialize(base_url:, token:, transport:)
         unless token.is_a?(String) && token.length >= 32
@@ -52,19 +51,17 @@ module PrismBot
         request("POST", BIND_TELEGRAM_SURFACE_PATH, payload: payload)
       end
 
-      def clear_personal_alert_subscription(provider:, provider_scope:, subject_id:)
-        request(
-          "POST",
-          CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-          payload: provider_subject_payload(provider, provider_scope, subject_id)
-        )
-      end
+      # A POST of a person's provider evidence plus product fields to an operation the pinned
+      # contract declares. The path is checked against the contract, never built from input.
+      def personal_call(path:, provider:, provider_scope:, subject_id:, fields: {})
+        unless POST_PATHS.include?(path)
+          raise InputError.new("bot.hub.operation.unknown", "Prism Hub operation is not in the pinned contract")
+        end
 
-      def get_personal_alert_subscription(provider:, provider_scope:, subject_id:)
         request(
           "POST",
-          GET_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-          payload: provider_subject_payload(provider, provider_scope, subject_id)
+          path,
+          payload: provider_subject_payload(provider, provider_scope, subject_id).merge(fields.to_h)
         )
       end
 
@@ -121,25 +118,6 @@ module PrismBot
           "POST",
           RESUME_PERSONAL_BOT_PATH,
           payload: provider_subject_payload(provider, provider_scope, subject_id)
-        )
-      end
-
-      def save_personal_alert_subscription(
-        provider:,
-        provider_scope:,
-        subject_id:,
-        cell:,
-        categories:,
-        include_nearby:
-      )
-        request(
-          "POST",
-          SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH,
-          payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
-            "cell" => cell,
-            "categories" => categories,
-            "include_nearby" => include_nearby
-          )
         )
       end
 
