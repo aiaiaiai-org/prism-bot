@@ -11,6 +11,11 @@
 
 ### Added
 
+- Generated Hub client operations for alert subscriptions (status, save, clear) and Telegram
+  surface binding, with `Ports::AlertSubscriptions`, `Ports::SurfaceBinding`, an immutable
+  `Domain::AlertSubscription` (an H3 resolution 6 cell, never a coordinate), and the matching
+  `HubGateway` methods. Binding resolves the personal workspace server-side, so no Hub workspace
+  id reaches a client product. Nothing in Telegram routing uses them yet.
 - Telegram SurfaceContext and `/context` cards with topic-preserving replies.
 - Actor-authorized local context diagnostics available while paused or disabled.
 

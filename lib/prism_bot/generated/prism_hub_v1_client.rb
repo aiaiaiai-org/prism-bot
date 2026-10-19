@@ -5,6 +5,9 @@ module PrismBot
   module Generated
     class PrismHubV1Client
       CONTRACT_SHA256 = "b293ad3ab209be0c6a80fb8ad9d938c2e1c9fbb0268b631818fad1e11c55e7de"
+      BIND_TELEGRAM_SURFACE_PATH = "/api/v1/telegram/surfaces/bind"
+      CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/clear"
+      GET_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/status"
       GET_PERSONAL_BOT_STATUS_PATH = "/api/v1/bot-instances/personal/status"
       LIST_CHANNELS_PATH = "/api/v1/channels"
       ONBOARD_ACTOR_PATH = "/api/v1/actors/onboard"
@@ -13,6 +16,7 @@ module PrismBot
       RESOLVE_ACTOR_PATH = "/api/v1/actors/resolve"
       RESOLVE_PERSONAL_ACTOR_PATH = "/api/v1/actors/personal/resolve"
       RESUME_PERSONAL_BOT_PATH = "/api/v1/bot-instances/personal/resume"
+      SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH = "/api/v1/alert-subscriptions/personal/save"
       VALIDATE_PUBLICATION_PATH = "/api/v1/publications/validate"
 
       def initialize(base_url:, token:, transport:)
@@ -26,6 +30,42 @@ module PrismBot
         @base_url = String(base_url).sub(%r{/+\z}, "").freeze
         @token = token.dup.freeze
         @transport = transport
+      end
+
+      def bind_telegram_surface(
+        workspace_id:,
+        logical_channel:,
+        chat_id:,
+        provider:,
+        provider_scope:,
+        subject_id:,
+        message_thread_id: nil,
+        bot_instance_id: nil
+      )
+        payload = provider_subject_payload(provider, provider_scope, subject_id).merge(
+          "workspace_id" => workspace_id,
+          "logical_channel" => logical_channel,
+          "chat_id" => chat_id
+        )
+        payload["message_thread_id"] = message_thread_id if message_thread_id
+        payload["bot_instance_id"] = bot_instance_id if bot_instance_id
+        request("POST", BIND_TELEGRAM_SURFACE_PATH, payload: payload)
+      end
+
+      def clear_personal_alert_subscription(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
+      def get_personal_alert_subscription(provider:, provider_scope:, subject_id:)
+        request(
+          "POST",
+          GET_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
       end
 
       def get_personal_bot_status(provider:, provider_scope:, subject_id:)
@@ -81,6 +121,25 @@ module PrismBot
           "POST",
           RESUME_PERSONAL_BOT_PATH,
           payload: provider_subject_payload(provider, provider_scope, subject_id)
+        )
+      end
+
+      def save_personal_alert_subscription(
+        provider:,
+        provider_scope:,
+        subject_id:,
+        cell:,
+        categories:,
+        include_nearby:
+      )
+        request(
+          "POST",
+          SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+          payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
+            "cell" => cell,
+            "categories" => categories,
+            "include_nearby" => include_nearby
+          )
         )
       end
 

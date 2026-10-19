@@ -43,4 +43,71 @@ class PrismHubLifecycleClientTest < Minitest::Test
       )
     end
   end
+
+  def test_sends_alert_subscription_operations_to_their_contract_paths
+    cell = "861e0d9a7ffffff"
+    evidence = {provider: "telegram", provider_scope: "global", subject_id: "123456789"}
+    wire_evidence = evidence.transform_keys(&:to_s)
+    calls = {
+      get_personal_alert_subscription: [
+        "/api/v1/alert-subscriptions/personal/status", {}, wire_evidence
+      ],
+      clear_personal_alert_subscription: [
+        "/api/v1/alert-subscriptions/personal/clear", {}, wire_evidence
+      ],
+      save_personal_alert_subscription: [
+        "/api/v1/alert-subscriptions/personal/save",
+        {cell: cell, categories: ["drone"], include_nearby: false},
+        wire_evidence.merge("cell" => cell, "categories" => ["drone"], "include_nearby" => false)
+      ]
+    }
+
+    calls.each do |method, (path, extra, expected)|
+      transport = FakeTransport.new(body: JSON.generate("alert_subscription" => nil))
+      client = PrismBot::Generated::PrismHubV1Client.new(
+        base_url: "https://hub.example.test",
+        token: TOKEN,
+        transport: transport
+      )
+
+      client.public_send(method, **evidence, **extra)
+
+      request = transport.calls.fetch(0)
+      assert_equal "POST", request.fetch(:method)
+      assert_equal "https://hub.example.test#{path}", request.fetch(:url)
+      assert_equal expected, JSON.parse(request.fetch(:body))
+    end
+  end
+
+  def test_binds_a_telegram_chat_and_omits_unset_optional_fields
+    transport = FakeTransport.new(body: JSON.generate("binding" => {"status" => "active"}))
+    client = PrismBot::Generated::PrismHubV1Client.new(
+      base_url: "https://hub.example.test",
+      token: TOKEN,
+      transport: transport
+    )
+
+    client.bind_telegram_surface(
+      workspace_id: "personal-0x0sky",
+      logical_channel: "alerts",
+      chat_id: 42,
+      provider: "telegram",
+      provider_scope: "global",
+      subject_id: "123456789"
+    )
+
+    request = transport.calls.fetch(0)
+    assert_equal "https://hub.example.test/api/v1/telegram/surfaces/bind", request.fetch(:url)
+    assert_equal(
+      {
+        "provider" => "telegram",
+        "provider_scope" => "global",
+        "subject_id" => "123456789",
+        "workspace_id" => "personal-0x0sky",
+        "logical_channel" => "alerts",
+        "chat_id" => 42
+      },
+      JSON.parse(request.fetch(:body))
+    )
+  end
 end

@@ -20,6 +20,9 @@ operations = contract.fetch("paths").each_with_object({}) do |(path, methods), v
 end
 
 required = %w[
+  bindTelegramSurface
+  clearPersonalAlertSubscription
+  getPersonalAlertSubscription
   getPersonalBotStatus
   listChannels
   onboardActor
@@ -28,6 +31,7 @@ required = %w[
   resolveActor
   resolvePersonalActor
   resumePersonalBot
+  savePersonalAlertSubscription
   validatePublication
 ]
 missing = required - operations.keys
@@ -41,6 +45,9 @@ template = <<~'RUBY'
     module Generated
       class PrismHubV1Client
         CONTRACT_SHA256 = "%<digest>s"
+        BIND_TELEGRAM_SURFACE_PATH = %<bind_surface_path>s
+        CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<clear_alert_path>s
+        GET_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<get_alert_path>s
         GET_PERSONAL_BOT_STATUS_PATH = %<status_path>s
         LIST_CHANNELS_PATH = %<list_path>s
         ONBOARD_ACTOR_PATH = %<onboard_actor_path>s
@@ -49,6 +56,7 @@ template = <<~'RUBY'
         RESOLVE_ACTOR_PATH = %<resolve_actor_path>s
         RESOLVE_PERSONAL_ACTOR_PATH = %<resolve_personal_actor_path>s
         RESUME_PERSONAL_BOT_PATH = %<resume_path>s
+        SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH = %<save_alert_path>s
         VALIDATE_PUBLICATION_PATH = %<validate_path>s
 
         def initialize(base_url:, token:, transport:)
@@ -62,6 +70,42 @@ template = <<~'RUBY'
           @base_url = String(base_url).sub(%%r{/+\z}, "").freeze
           @token = token.dup.freeze
           @transport = transport
+        end
+
+        def bind_telegram_surface(
+          workspace_id:,
+          logical_channel:,
+          chat_id:,
+          provider:,
+          provider_scope:,
+          subject_id:,
+          message_thread_id: nil,
+          bot_instance_id: nil
+        )
+          payload = provider_subject_payload(provider, provider_scope, subject_id).merge(
+            "workspace_id" => workspace_id,
+            "logical_channel" => logical_channel,
+            "chat_id" => chat_id
+          )
+          payload["message_thread_id"] = message_thread_id if message_thread_id
+          payload["bot_instance_id"] = bot_instance_id if bot_instance_id
+          request("POST", BIND_TELEGRAM_SURFACE_PATH, payload: payload)
+        end
+
+        def clear_personal_alert_subscription(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            CLEAR_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
+        def get_personal_alert_subscription(provider:, provider_scope:, subject_id:)
+          request(
+            "POST",
+            GET_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
         end
 
         def get_personal_bot_status(provider:, provider_scope:, subject_id:)
@@ -117,6 +161,25 @@ template = <<~'RUBY'
             "POST",
             RESUME_PERSONAL_BOT_PATH,
             payload: provider_subject_payload(provider, provider_scope, subject_id)
+          )
+        end
+
+        def save_personal_alert_subscription(
+          provider:,
+          provider_scope:,
+          subject_id:,
+          cell:,
+          categories:,
+          include_nearby:
+        )
+          request(
+            "POST",
+            SAVE_PERSONAL_ALERT_SUBSCRIPTION_PATH,
+            payload: provider_subject_payload(provider, provider_scope, subject_id).merge(
+              "cell" => cell,
+              "categories" => categories,
+              "include_nearby" => include_nearby
+            )
           )
         end
 
@@ -197,6 +260,9 @@ RUBY
 generated = format(
   template,
   digest: Digest::SHA256.hexdigest(contract_source),
+  bind_surface_path: operations.fetch("bindTelegramSurface").inspect,
+  clear_alert_path: operations.fetch("clearPersonalAlertSubscription").inspect,
+  get_alert_path: operations.fetch("getPersonalAlertSubscription").inspect,
   status_path: operations.fetch("getPersonalBotStatus").inspect,
   list_path: operations.fetch("listChannels").inspect,
   onboard_actor_path: operations.fetch("onboardActor").inspect,
@@ -205,6 +271,7 @@ generated = format(
   resolve_actor_path: operations.fetch("resolveActor").inspect,
   resolve_personal_actor_path: operations.fetch("resolvePersonalActor").inspect,
   resume_path: operations.fetch("resumePersonalBot").inspect,
+  save_alert_path: operations.fetch("savePersonalAlertSubscription").inspect,
   validate_path: operations.fetch("validatePublication").inspect
 )
 

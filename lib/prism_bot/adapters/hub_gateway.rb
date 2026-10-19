@@ -9,9 +9,11 @@ module PrismBot
 
       include Ports::ActorOnboarder
       include Ports::ActorResolver
+      include Ports::AlertSubscriptions
       include Ports::BotLifecycle
       include Ports::ChannelCatalog
       include Ports::PublicationPublisher
+      include Ports::SurfaceBinding
 
       def initialize(client:)
         @client = client
@@ -67,6 +69,52 @@ module PrismBot
         )
       end
 
+      def alert_status(provider:, provider_scope:, subject_id:)
+        resolve_alert_subscription(
+          @client.get_personal_alert_subscription(
+            provider: provider,
+            provider_scope: provider_scope,
+            subject_id: subject_id
+          )
+        )
+      end
+
+      def save_alert(provider:, provider_scope:, subject_id:, subscription:)
+        resolve_alert_subscription(
+          @client.save_personal_alert_subscription(
+            provider: provider,
+            provider_scope: provider_scope,
+            subject_id: subject_id,
+            **subscription.to_h
+          )
+        )
+      end
+
+      def clear_alert(provider:, provider_scope:, subject_id:)
+        @client.clear_personal_alert_subscription(
+          provider: provider,
+          provider_scope: provider_scope,
+          subject_id: subject_id
+        )
+        nil
+      end
+
+      def bind_surface(provider:, provider_scope:, subject_id:, logical_channel:, chat_id:, message_thread_id: nil)
+        evidence = {provider: provider, provider_scope: provider_scope, subject_id: subject_id}
+        workspace_id = personal_workspace_id(@client.resolve_personal_actor(**evidence))
+        # Reading the status makes sure the hub has this bot's instance in the person's workspace,
+        # which the binding refers to when no instance id is given.
+        @client.get_personal_bot_status(**evidence)
+        @client.bind_telegram_surface(
+          **evidence,
+          workspace_id: workspace_id,
+          logical_channel: logical_channel,
+          chat_id: chat_id,
+          message_thread_id: message_thread_id
+        )
+        nil
+      end
+
       def list
         channels = []
         cursor = nil
@@ -114,6 +162,34 @@ module PrismBot
       end
 
       private
+
+      def resolve_alert_subscription(response)
+        value = response.fetch("alert_subscription")
+        return nil if value.nil?
+
+        Domain::AlertSubscription.new(
+          cell: value.fetch("cell"),
+          categories: value.fetch("categories"),
+          include_nearby: value.fetch("include_nearby")
+        )
+      rescue InputError, KeyError, TypeError
+        raise TransportError.new(
+          "bot.hub.alerts.response.invalid",
+          "Prism Hub returned an invalid alert subscription response"
+        )
+      end
+
+      def personal_workspace_id(response)
+        workspace_id = response.fetch("actor").fetch("workspace_id")
+        return workspace_id if workspace_id.is_a?(String) && !workspace_id.empty?
+
+        raise KeyError, "workspace_id"
+      rescue KeyError, TypeError
+        raise TransportError.new(
+          "bot.hub.actor.workspace.invalid",
+          "Prism Hub returned an invalid personal workspace"
+        )
+      end
 
       def resolve_lifecycle_state(response)
         value = response.fetch("bot_instance")
