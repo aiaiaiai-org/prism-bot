@@ -75,6 +75,27 @@ class WebhookAppTest < Minitest::Test
     assert_equal "person:0x0sky", router.updates.fetch(0).actor.canonical_ref
   end
 
+  def test_dispatches_a_shared_position_for_an_authorized_actor
+    router = RecordingRouter.new
+    app = webhook_app(router: router)
+    payload = {
+      "update_id" => 43,
+      "message" => {
+        "chat" => {"id" => 7, "type" => "private"},
+        "from" => {"id" => 7},
+        "location" => {"latitude" => 50.45, "longitude" => 30.52}
+      }
+    }
+
+    status, = app.call(webhook_environment(payload))
+
+    assert_equal 200, status
+    update = router.updates.fetch(0)
+    assert_equal "person:0x0sky", update.actor.canonical_ref
+    assert_in_delta 50.45, update.location.latitude
+    assert_equal "", update.text
+  end
+
   def test_dispatches_authorized_update_with_canonical_actor
     router = RecordingRouter.new
     app = webhook_app(router: router)

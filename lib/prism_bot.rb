@@ -15,6 +15,7 @@ require_relative "prism_bot/error"
 require_relative "prism_bot/configuration"
 
 require_relative "prism_bot/domain/human_actor"
+require_relative "prism_bot/domain/location"
 require_relative "prism_bot/domain/bot_lifecycle_state"
 require_relative "prism_bot/domain/publication"
 require_relative "prism_bot/domain/interaction_key"
