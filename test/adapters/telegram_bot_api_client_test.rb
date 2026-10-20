@@ -122,4 +122,38 @@ class TelegramBotApiClientTest < Minitest::Test
     end
     assert_empty transport.calls
   end
+
+  def test_a_location_request_adds_a_one_tap_share_button
+    transport = success_transport
+
+    client(transport).send_message(chat_id: 42, text: "Where are you?", location_request: "Share")
+
+    payload = JSON.parse(transport.calls.fetch(0).fetch(:body))
+    assert_equal(
+      {
+        "keyboard" => [[{"text" => "Share", "request_location" => true}]],
+        "resize_keyboard" => true,
+        "one_time_keyboard" => true
+      },
+      payload.fetch("reply_markup")
+    )
+  end
+
+  def test_a_reply_without_a_location_request_has_no_keyboard
+    transport = success_transport
+
+    client(transport).send_message(chat_id: 42, text: "Hello")
+
+    refute JSON.parse(transport.calls.fetch(0).fetch(:body)).key?("reply_markup")
+  end
+
+  def test_an_invalid_location_request_label_never_reaches_transport
+    transport = success_transport
+    ["", "x" * 65, 5, :share].each do |label|
+      assert_raises(PrismBot::InputError) do
+        client(transport).send_message(chat_id: 42, text: "Hello", location_request: label)
+      end
+    end
+    assert_empty transport.calls
+  end
 end

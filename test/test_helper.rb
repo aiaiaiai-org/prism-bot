@@ -163,9 +163,10 @@ module PrismBotTestSupport
       @messages = []
     end
 
-    def send_message(chat_id:, text:, message_thread_id: nil)
+    def send_message(chat_id:, text:, message_thread_id: nil, location_request: nil)
       message = {"chat_id" => chat_id, "text" => text}
       message["message_thread_id"] = message_thread_id if message_thread_id
+      message["location_request"] = location_request if location_request
       @messages << message
     end
   end

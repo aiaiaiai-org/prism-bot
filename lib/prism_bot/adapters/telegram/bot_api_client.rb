@@ -8,6 +8,7 @@ module PrismBot
         include Ports::OutboundDelivery
 
         MAX_MESSAGE_CHARACTERS = 4_096
+        MAX_BUTTON_CHARACTERS = 64
 
         def initialize(token:, transport:)
           if !token.is_a?(String) || token.empty?
@@ -21,12 +22,17 @@ module PrismBot
           @transport = transport
         end
 
-        def send_message(chat_id:, text:, message_thread_id: nil)
+        def send_message(chat_id:, text:, message_thread_id: nil, location_request: nil)
           if !message_thread_id.nil? && (!message_thread_id.is_a?(Integer) || !message_thread_id.positive?)
             raise InputError.new("bot.telegram.surface.thread.invalid", "Telegram topic is invalid")
           end
 
-          perform_send(chat_id: chat_id, text: truncate(String(text)), message_thread_id: message_thread_id)
+          perform_send(
+            chat_id: chat_id,
+            text: truncate(String(text)),
+            message_thread_id: message_thread_id,
+            location_request: validate_location_request!(location_request)
+          )
           nil
         end
 
@@ -46,7 +52,7 @@ module PrismBot
 
         private
 
-        def perform_send(chat_id:, text:, message_thread_id: nil, disable_link_preview: false)
+        def perform_send(chat_id:, text:, message_thread_id: nil, disable_link_preview: false, location_request: nil)
           response = @transport.call(
             method: "POST",
             url: @endpoint,
@@ -54,7 +60,7 @@ module PrismBot
               "accept" => "application/json",
               "content-type" => "application/json"
             },
-            body: JSON.generate(payload(chat_id:, text:, message_thread_id:, disable_link_preview:))
+            body: JSON.generate(payload(chat_id:, text:, message_thread_id:, disable_link_preview:, location_request:))
           )
           value = parse_response(response.body)
           return value if response.status == 200 && value["ok"] == true
@@ -69,9 +75,16 @@ module PrismBot
           )
         end
 
-        def payload(chat_id:, text:, message_thread_id:, disable_link_preview:)
+        def payload(chat_id:, text:, message_thread_id:, disable_link_preview:, location_request:)
           result = {"chat_id" => chat_id, "text" => text}
           result["message_thread_id"] = message_thread_id if message_thread_id
+          if location_request
+            result["reply_markup"] = {
+              "keyboard" => [[{"text" => location_request, "request_location" => true}]],
+              "resize_keyboard" => true,
+              "one_time_keyboard" => true
+            }
+          end
           result["link_preview_options"] = {"is_disabled" => true} if disable_link_preview
           result
         end
@@ -116,6 +129,13 @@ module PrismBot
             "bot.telegram.response.invalid",
             "Telegram returned an invalid delivery result"
           )
+        end
+
+        def validate_location_request!(label)
+          return nil if label.nil?
+          return label if label.is_a?(String) && (1..MAX_BUTTON_CHARACTERS).cover?(label.length)
+
+          raise InputError.new("bot.telegram.location_request.invalid", "location request label is invalid")
         end
 
         def validate_delivery!(chat_id:, text:, idempotency_key:, message_thread_id:)

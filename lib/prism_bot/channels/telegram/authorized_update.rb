@@ -35,6 +35,10 @@ module PrismBot
           update.text
         end
 
+        def location
+          update.location
+        end
+
         def surface_context
           update.surface_context
         end

@@ -4,9 +4,9 @@ module PrismBot
   module Channels
     module Telegram
       class Update
-        attr_reader :update_id, :chat_id, :user_id, :text, :surface_context
+        attr_reader :update_id, :chat_id, :user_id, :text, :surface_context, :location
 
-        def initialize(update_id:, chat_id:, user_id:, text:, surface_context: nil)
+        def initialize(update_id:, chat_id:, user_id:, text:, surface_context: nil, location: nil)
           @update_id = Integer(update_id)
           if @update_id.negative?
             raise InputError.new(
@@ -21,6 +21,10 @@ module PrismBot
           unless @surface_context.is_a?(SurfaceContext) && @surface_context.chat_id == @chat_id
             raise InputError.new("bot.telegram.surface.mismatch", "Telegram surface does not match the update")
           end
+          unless location.nil? || location.is_a?(Domain::Location)
+            raise InputError.new("bot.telegram.location.invalid", "Telegram location is invalid")
+          end
+          @location = location
           freeze
         end
 

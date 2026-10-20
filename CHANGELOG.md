@@ -11,6 +11,11 @@
 
 ### Added
 
+- Telegram shared positions, including live ones (delivered by Telegram as edits of the sharing
+  message), parse into an update with an immutable `Domain::Location` and no text, so a client
+  composition can route them. `send_message` accepts `location_request:`, the label of a
+  one-tap "share position" keyboard. prism-bot only carries the position: it does not store it
+  or interpret it.
 - Telegram SurfaceContext and `/context` cards with topic-preserving replies.
 - Actor-authorized local context diagnostics available while paused or disabled.
 
