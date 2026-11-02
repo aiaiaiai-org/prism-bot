@@ -165,4 +165,14 @@ class WebhookAppTest < Minitest::Test
 
     assert_equal 200, status
   end
+
+  def test_responses_satisfy_rack_lint
+    app = Rack::Lint.new(webhook_app(router: RecordingRouter.new))
+
+    status, headers, body = app.call(Rack::MockRequest.env_for("/healthz", method: "GET"))
+    body.close
+
+    assert_equal 200, status
+    refute_predicate headers, :frozen?
+  end
 end

@@ -50,6 +50,16 @@ class OutboundDeliveryEndpointTest < Minitest::Test
     assert_equal "delivery-1", JSON.parse(response.body).dig("delivery", "idempotency_key")
   end
 
+  def test_responses_satisfy_rack_lint
+    status, headers, body = Rack::Lint.new(@app).call(
+      Rack::MockRequest.env_for("/api/v1/delivery", method: "POST", input: "{}")
+    )
+    body.close
+
+    refute_equal 500, status
+    refute_predicate headers, :frozen?
+  end
+
   def test_rejects_invalid_secret_before_delivery
     response = request(
       "x" * 32,

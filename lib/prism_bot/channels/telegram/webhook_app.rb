@@ -140,7 +140,9 @@ module PrismBot
         end
 
         def response(status, value)
-          [status, JSON_HEADERS, [JSON.generate(value)]]
+          # Rack 3 hands the headers hash to middleware that may add to it (Rack::ContentLength),
+          # so every response gets its own mutable copy.
+          [status, JSON_HEADERS.dup, [JSON.generate(value)]]
         end
       end
     end
