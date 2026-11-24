@@ -164,10 +164,11 @@ module PrismBotTestSupport
       @messages = []
     end
 
-    def send_message(chat_id:, text:, message_thread_id: nil, location_request: nil)
+    def send_message(chat_id:, text:, message_thread_id: nil, location_request: nil, ephemeral: nil)
       message = {"chat_id" => chat_id, "text" => text}
       message["message_thread_id"] = message_thread_id if message_thread_id
       message["location_request"] = location_request if location_request
+      message["ephemeral"] = ephemeral if ephemeral
       @messages << message
     end
   end
@@ -211,6 +212,22 @@ module PrismBotTestSupport
     def send_public_voice(chat_id:, clip:, caption:, message_thread_id: nil)
       @voices << {chat_id: chat_id, message_thread_id: message_thread_id, clip: clip, caption: caption}
       PrismBot::Domain::VoiceReceipt.new(file_id: "voice-file", message_id: 700 + @voices.length)
+    end
+  end
+
+  class FakeCallbackAnswerer
+    include PrismBot::Ports::CallbackAnswerer
+
+    attr_reader :answered
+
+    def initialize(error: nil)
+      @answered = []
+      @error = error
+    end
+
+    def answer_callback_query(callback_query_id:, text: nil)
+      @answered << callback_query_id
+      raise @error if @error
     end
   end
 
@@ -291,7 +308,8 @@ module PrismBotTestSupport
     actor_onboarder: FakeActorOnboarder.new,
     bot_lifecycle: FakeBotLifecycle.new,
     allowed_chat_ids: [],
-    max_body_bytes: 1024
+    max_body_bytes: 1024,
+    callback_answerer: nil
   )
     logger = Logger.new(StringIO.new)
     lifecycle = PrismBot::Channels::Telegram::LifecycleController.new(
@@ -316,7 +334,8 @@ module PrismBotTestSupport
       message_sender: sender,
       presenter: PrismBot::Channels::Telegram::ResultPresenter.new,
       logger: logger,
-      max_body_bytes: max_body_bytes
+      max_body_bytes: max_body_bytes,
+      callback_answerer: callback_answerer
     )
   end
 
@@ -328,6 +347,28 @@ module PrismBotTestSupport
       "CONTENT_TYPE" => "application/json",
       "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN" => secret
     )
+  end
+
+  def ephemeral_command_payload(text: "/whisper", update_id: 42, chat_id: -1001, user_id: 7, ephemeral_message_id: 5, thread: nil)
+    message = {
+      "chat" => {"id" => chat_id, "type" => "supergroup"},
+      "from" => {"id" => user_id},
+      "text" => text,
+      "message_id" => 0,
+      "ephemeral_message_id" => ephemeral_message_id
+    }
+    message["message_thread_id"] = thread if thread
+    {"update_id" => update_id, "message" => message}
+  end
+
+  def callback_payload(data: "w:go", id: "cb-1", update_id: 43, chat_id: -1001, user_id: 7, thread: nil, source_ephemeral: nil)
+    message = {"message_id" => 99, "date" => 1_700_000_000, "chat" => {"id" => chat_id, "type" => "supergroup"}}
+    message["message_thread_id"] = thread if thread
+    message.merge!("message_id" => 0, "ephemeral_message_id" => source_ephemeral) if source_ephemeral
+    {
+      "update_id" => update_id,
+      "callback_query" => {"id" => id, "from" => {"id" => user_id, "is_bot" => false}, "data" => data, "message" => message}
+    }
   end
 
   def telegram_payload(text: "/help", update_id: 42, chat_id: -1001, user_id: 7)

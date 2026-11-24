@@ -20,7 +20,8 @@ module PrismBot
           presenter:,
           logger:,
           max_body_bytes:,
-          delivery_endpoint: nil
+          delivery_endpoint: nil,
+          callback_answerer: nil
         )
           @secret = secret
           @update_parser = update_parser
@@ -33,6 +34,7 @@ module PrismBot
           @logger = logger
           @max_body_bytes = Integer(max_body_bytes)
           @delivery_endpoint = delivery_endpoint
+          @callback_answerer = callback_answerer
           if @max_body_bytes <= 0
             raise ConfigurationError.new(
               "bot.telegram.max_body.invalid",
@@ -123,6 +125,19 @@ module PrismBot
           @logger.error("telegram_webhook unexpected_error class=#{error.class.name}")
           safely_notify(authorized_update, @presenter.error(error)) if authorized_update
           accepted
+        ensure
+          answer_callback(update)
+        end
+
+        # Clears the progress bar on a pressed button, once the press has been handled or refused.
+        # Answering last keeps the callback usable for a private reply until then. It carries no
+        # text, and a failure to answer never changes how the update was handled.
+        def answer_callback(update)
+          return unless @callback_answerer && update&.callback
+
+          @callback_answerer.answer_callback_query(callback_query_id: update.callback.id)
+        rescue StandardError => error
+          @logger.warn("telegram_webhook callback_answer_failed class=#{error.class.name}")
         end
 
         def safely_notify(update, text)

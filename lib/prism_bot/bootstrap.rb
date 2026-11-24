@@ -21,6 +21,12 @@ module PrismBot
         token: configuration.telegram_token,
         transport: transport
       )
+      # Handlers and error notices answer through this sender: public updates reply in the chat,
+      # private ones (ephemeral commands, button presses) reply only to the person who acted.
+      reply_sender = Adapters::Telegram::PrivateReplySender.new(
+        public_sender: message_sender,
+        ephemeral_sender: ephemeral_sender
+      )
       bot_lifecycle = UseCases::ManageBotLifecycle.new(bot_lifecycle: hub_gateway)
       lifecycle = Channels::Telegram::LifecycleController.new(
         bot_lifecycle: bot_lifecycle
@@ -31,7 +37,7 @@ module PrismBot
         default_locale: configuration.default_locale,
         default_voice_profile: configuration.default_voice_profile,
         dispatch_policy: configuration.dispatch_policy,
-        message_sender: message_sender,
+        message_sender: reply_sender,
         ephemeral_message_sender: ephemeral_sender,
         voice_sender: ephemeral_sender,
         list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
@@ -56,7 +62,8 @@ module PrismBot
         command_router: command_router,
         state_handlers: composition.state_handlers,
         state_store: composition.state_store,
-        instance_id: configuration.instance_id
+        instance_id: configuration.instance_id,
+        callback_router: Channels::Telegram::CallbackRouter.new(handlers: composition.callback_handlers)
       )
       delivery_endpoint = Interfaces::HTTP::OutboundDeliveryEndpoint.new(
         secret: Interfaces::HTTP::SharedSecret.new(
@@ -81,11 +88,12 @@ module PrismBot
         ),
         lifecycle_gate: Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
         command_router: interaction_router,
-        message_sender: message_sender,
+        message_sender: reply_sender,
         presenter: composition.presenter,
         logger: logger,
         max_body_bytes: configuration.max_webhook_bytes,
-        delivery_endpoint: delivery_endpoint
+        delivery_endpoint: delivery_endpoint,
+        callback_answerer: message_sender
       )
     end
   end

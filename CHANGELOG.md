@@ -11,6 +11,13 @@
 
 ### Added
 
+- Private updates. Ephemeral commands and button presses (`callback_query`) parse into an
+  `Update` that is `private?`; its `reply_target` carries an ephemeral target, so handlers and the
+  webhook's own notices reply only to the sender and never publicly. `Services#message_sender` is
+  now a `PrivateReplySender`; `MessageSender#send_message` accepts `ephemeral:`.
+- `Composition#callback_handlers` and `CallbackRouter`, routing a press by the start of its
+  `callback_data`; `Ports::CallbackAnswerer` (`answerCallbackQuery`) called by the webhook after
+  every press.
 - Ephemeral and native voice delivery ports (`Ports::EphemeralMessageSender`, `Ports::VoiceSender`)
   with `Adapters::Telegram::EphemeralBotApiClient`, exposed through
   `Client::Services#ephemeral_message_sender` and `#voice_sender`. Private delivery is verified
