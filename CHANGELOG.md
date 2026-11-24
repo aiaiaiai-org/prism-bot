@@ -11,6 +11,10 @@
 
 ### Added
 
+- Group message observers. `Composition#observers` receive an immutable `Observation` (human
+  text or caption, original date, author, chat and topic; edits flagged) for ordinary group
+  messages, before actor authorization and without changing command handling. Private updates,
+  bots, channels and anonymous senders are never observed; a failing observer is isolated.
 - `Ports::ChatMemberLookup` and `Adapters::Telegram::ChatMemberClient` (`getChatMember`), exposed
   as `Client::Services#chat_member_lookup`, with `Domain::ChatMembership#administrator?`. A lookup
   Telegram does not confirm raises instead of reporting an administrator. `Client::Services.new`
