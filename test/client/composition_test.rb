@@ -85,6 +85,17 @@ class ClientCompositionTest < Minitest::Test
     refute_respond_to services, :hub_gateway
   end
 
+  def test_services_expose_private_delivery_ports_and_require_them_to_be_complete
+    sender = FakeEphemeralSender.new
+    services = client_services(FakeMessageSender.new, ephemeral: sender, voice: sender)
+
+    assert_same sender, services.ephemeral_message_sender
+    assert_same sender, services.voice_sender
+    assert_raises(ArgumentError) { client_services(FakeMessageSender.new, ephemeral: FakeMessageSender.new) }
+    assert_raises(ArgumentError) { client_services(FakeMessageSender.new, voice: Object.new) }
+    assert_raises(ArgumentError) { client_services(FakeMessageSender.new, ephemeral: nil) }
+  end
+
   def test_pending_interaction_is_isolated_by_chat_topic_and_actor
     sender = FakeMessageSender.new
     services = client_services(sender)
@@ -138,7 +149,7 @@ class ClientCompositionTest < Minitest::Test
     )
   end
 
-  def client_services(sender)
+  def client_services(sender, ephemeral: FakeEphemeralSender.new, voice: FakeEphemeralSender.new)
     PrismBot::Client::Services.new(
       instance_id: "test-client",
       default_channel_ids: ["personal-threads"],
@@ -146,6 +157,8 @@ class ClientCompositionTest < Minitest::Test
       default_voice_profile: "0x0sky.uk_SP",
       dispatch_policy: "require_all_valid",
       message_sender: sender,
+      ephemeral_message_sender: ephemeral,
+      voice_sender: voice,
       list_channels: ->(**) { [] },
       publish_publication: ->(**) { {} },
       bot_lifecycle: FakeBotLifecycle.new

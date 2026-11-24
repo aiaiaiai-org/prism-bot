@@ -11,6 +11,11 @@
 
 ### Added
 
+- Ephemeral and native voice delivery ports (`Ports::EphemeralMessageSender`, `Ports::VoiceSender`)
+  with `Adapters::Telegram::EphemeralBotApiClient`, exposed through
+  `Client::Services#ephemeral_message_sender` and `#voice_sender`. Private delivery is verified
+  from the Telegram response and never falls back to a public message. `Client::Services.new`
+  now requires both services.
 - Telegram shared positions, including live ones (delivered by Telegram as edits of the sharing
   message), parse into an update with an immutable `Domain::Location` and no text, so a client
   composition can route them. `send_message` accepts `location_request:`, the label of a

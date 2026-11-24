@@ -17,6 +17,7 @@ This foundation provides:
   human identity authorization;
 - bounded traversal of Hub channel pages with validated publishing capabilities;
 - verified Telegram webhook ingress and a focused Bot API sender adapter;
+- ephemeral (receiver-only) message send/edit and native voice delivery ports for concrete products;
 - an authenticated service-to-service outbound delivery endpoint for Hub-to-Telegram dispatch;
 - extensible interaction routing with `/help`, `/channels`, lifecycle, and
   text-only `/publish` handlers;
