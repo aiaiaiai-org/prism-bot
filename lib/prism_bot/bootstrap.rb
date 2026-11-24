@@ -97,7 +97,11 @@ module PrismBot
         logger: logger,
         max_body_bytes: configuration.max_webhook_bytes,
         delivery_endpoint: delivery_endpoint,
-        callback_answerer: message_sender
+        callback_answerer: message_sender,
+        observation_parser: composition.observers.empty? ? nil : Channels::Telegram::ObservationParser.new,
+        observer: composition.observers.empty? ? nil : Channels::Telegram::ObserverChain.new(
+          observers: composition.observers, logger: logger
+        )
       )
     end
   end

@@ -21,7 +21,9 @@ module PrismBot
           logger:,
           max_body_bytes:,
           delivery_endpoint: nil,
-          callback_answerer: nil
+          callback_answerer: nil,
+          observation_parser: nil,
+          observer: nil
         )
           @secret = secret
           @update_parser = update_parser
@@ -35,6 +37,8 @@ module PrismBot
           @max_body_bytes = Integer(max_body_bytes)
           @delivery_endpoint = delivery_endpoint
           @callback_answerer = callback_answerer
+          @observation_parser = observation_parser
+          @observer = observer
           if @max_body_bytes <= 0
             raise ConfigurationError.new(
               "bot.telegram.max_body.invalid",
@@ -81,6 +85,7 @@ module PrismBot
           end
 
           value = JSON.parse(source)
+          observe(value)
           update = @update_parser.call(value)
           return accepted unless update
 
@@ -127,6 +132,20 @@ module PrismBot
           accepted
         ensure
           answer_callback(update)
+        end
+
+        # Group content goes to observers before, and independently of, command handling: the same
+        # message may also be a command, and a person who never onboarded is still observed. Only
+        # allowed chats are observed, and nothing an observer does can change the response.
+        def observe(value)
+          return unless @observer && @observation_parser
+
+          observation = @observation_parser.call(value)
+          return unless observation && @context_policy.allowed?(observation)
+
+          @observer.call(observation)
+        rescue StandardError => error
+          @logger.error("telegram_webhook observation_failed class=#{error.class.name}")
         end
 
         # Clears the progress bar on a pressed button, once the press has been handled or refused.

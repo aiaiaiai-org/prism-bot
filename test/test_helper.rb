@@ -328,9 +328,11 @@ module PrismBotTestSupport
     bot_lifecycle: FakeBotLifecycle.new,
     allowed_chat_ids: [],
     max_body_bytes: 1024,
-    callback_answerer: nil
+    callback_answerer: nil,
+    observation_parser: nil,
+    observer: nil,
+    logger: Logger.new(StringIO.new)
   )
-    logger = Logger.new(StringIO.new)
     lifecycle = PrismBot::Channels::Telegram::LifecycleController.new(
       bot_lifecycle: PrismBot::UseCases::ManageBotLifecycle.new(bot_lifecycle: bot_lifecycle)
     )
@@ -354,7 +356,9 @@ module PrismBotTestSupport
       presenter: PrismBot::Channels::Telegram::ResultPresenter.new,
       logger: logger,
       max_body_bytes: max_body_bytes,
-      callback_answerer: callback_answerer
+      callback_answerer: callback_answerer,
+      observation_parser: observation_parser,
+      observer: observer
     )
   end
 

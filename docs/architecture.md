@@ -252,5 +252,26 @@ answer, a refusal, or an unreachable Telegram raises `MessageDeliveryError`. A c
 as "not confirmed", never as an administrator. `own_membership` takes the bot's id from the token
 prefix and raises `ConfigurationError` if the token has none.
 
+## Observing group messages
+
+`Composition#observers` are callables that receive an `Observation` for each ordinary group message
+or edit: update id, chat and topic, message id, human author (id, username, display name), text or
+caption, and the original send time. They run in `WebhookApp` after the webhook secret and the chat
+allowlist, and before actor authorization, so people who never onboarded are observed too. Observing
+never changes handling: the same message is still routed as a command, an observer's failure is
+logged by class name only (never its message, which may hold chat content), and it cannot alter the
+response.
+
+`ObservationParser` keeps only text or caption from a human member of a group or supergroup. It
+leaves out private chats, channels, bots, via-bot, anonymous or channel senders, service messages
+and every private update: an ephemeral command or button press is never observed. Anything it cannot
+read with certainty is ignored, never raised. Edits are observed (`edited?`), with the original
+`sent_at`; the update id orders an edit after the message it edits. `command?` flags a slash
+command, which most observers skip. The topic is the message's `message_thread_id`, as for replies.
+
+This repository does not decide who may be recorded. An observer must retain content only for chats
+that explicitly opted in, with disclosure, and must drop it when they opt out. No deletion event is
+observed: the Bot API does not deliver one for ordinary group messages.
+
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

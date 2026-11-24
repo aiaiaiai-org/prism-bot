@@ -3,12 +3,13 @@
 module PrismBot
   module Client
     class Composition
-      attr_reader :command_handlers, :state_handlers, :callback_handlers, :fallback, :state_store, :presenter
+      attr_reader :command_handlers, :state_handlers, :callback_handlers, :observers, :fallback, :state_store, :presenter
 
-      def initialize(command_handlers:, fallback:, presenter:, state_handlers: {}, callback_handlers: {}, state_store: nil)
+      def initialize(command_handlers:, fallback:, presenter:, state_handlers: {}, callback_handlers: {}, observers: [], state_store: nil)
         @command_handlers = normalize_handlers(command_handlers, "command")
         @state_handlers = normalize_handlers(state_handlers, "state")
         @callback_handlers = normalize_handlers(callback_handlers, "callback")
+        @observers = Array(observers).map { callable(_1, "observer") }.freeze
         @fallback = callable(fallback, "fallback")
         @presenter = validate_presenter!(presenter)
         @state_store = state_store || Adapters::NullInteractionStateStore.new
@@ -20,6 +21,7 @@ module PrismBot
         command_handlers: {},
         state_handlers: {},
         callback_handlers: {},
+        observers: [],
         fallback: @fallback,
         presenter: @presenter,
         state_store: @state_store
@@ -28,6 +30,7 @@ module PrismBot
           command_handlers: @command_handlers.merge(command_handlers),
           state_handlers: @state_handlers.merge(state_handlers),
           callback_handlers: @callback_handlers.merge(callback_handlers),
+          observers: @observers + Array(observers),
           fallback: fallback,
           presenter: presenter,
           state_store: state_store
