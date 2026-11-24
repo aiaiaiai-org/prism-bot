@@ -165,4 +165,49 @@ metadata crosses the port. It also validates actor responses and exposes only
 canonical human identity plus workspace role; provider subject IDs do not enter
 command presentation.
 
+## Ephemeral and voice delivery
+
+`PrismBot::Client::Services` exposes two further ports for products that answer only one person
+inside a group or topic: `ephemeral_message_sender` (`send_ephemeral_message`,
+`edit_ephemeral_message`) and `voice_sender` (`send_ephemeral_voice`, `send_public_voice`). Both
+are implemented by `Adapters::Telegram::EphemeralBotApiClient`. This layer is transport only: it
+adds no command, collection or product behaviour.
+
+Verified against the [Bot API reference](https://core.telegram.org/bots/api) at version 10.5
+(ephemeral messages arrived in 10.2; `EphemeralMessageParameters` in 10.3; callback replies without
+`receiver_user_id` in 10.4):
+
+| Use | Telegram API | Notes |
+|---|---|---|
+| send | `sendMessage` with `ephemeral_message_parameters` | `EphemeralMessageParameters` has `receiver_user_id`, `callback_query_id`, `replace_callback_query_message` |
+| edit | `editEphemeralMessageText` | requires `chat_id`, `receiver_user_id`, `ephemeral_message_id`; `text` 1-4096 characters |
+| voice | `sendVoice` with `ephemeral_message_parameters` | Ogg/Opus; caption 0-1024 characters; up to 50 MB |
+| command | `BotCommand.is_ephemeral` | declared by the bot; not set by this repository |
+
+An ephemeral message is also identified by `Message.ephemeral_message_id` (and `message_id` is `0`)
+and carries `Message.receiver_user`. A non-administrator bot may send one only within 15 seconds of
+the receiver's action, by answering a `callback_query_id` or replying to an incoming
+`reply_parameters.ephemeral_message_id`. An administrator bot may message any non-bot member at any
+time. `Domain::EphemeralTarget` records which of the three applies (`reply_to_callback`,
+`reply_to_ephemeral`, `to_member`), so a product cannot send without naming its authority.
+
+Rules the adapter enforces:
+
+- **Private or an error.** A success response counts as private delivery only if it carries a
+  positive `ephemeral_message_id`, a zero `message_id`, and a `receiver_user` equal to the intended
+  receiver. Otherwise it raises `bot.telegram.ephemeral.unconfirmed`. Nothing is ever re-sent
+  publicly. Telegram does not guarantee that the receiver sees the message (for example when they
+  are offline), so a success is never proof that the person saw it.
+- **Never shortened.** Text over 4096 characters or a caption over 1024 raises `InputError`.
+- **Native voice only.** `Domain::VoiceClip` accepts Ogg/Opus only, and a result without
+  `Message.voice` raises `bot.telegram.voice.unconfirmed`. There is no `sendAudio` or `sendDocument`
+  fallback.
+- **Private and public voice are different methods.** `send_public_voice` is for an explicit,
+  user-confirmed share; a missing target can never turn a private voice public.
+- **No content in errors.** Telegram's error text is not copied into exceptions.
+
+Callback queries must still be answered with `answerCallbackQuery` even when the reply is
+ephemeral. How incoming ephemeral commands and callbacks are parsed is an inbound concern outside
+these ports. Live Telegram verification of the response fields is still required before any deploy.
+
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

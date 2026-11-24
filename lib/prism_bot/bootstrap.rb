@@ -17,6 +17,10 @@ module PrismBot
         token: configuration.telegram_token,
         transport: transport
       )
+      ephemeral_sender = Adapters::Telegram::EphemeralBotApiClient.new(
+        token: configuration.telegram_token,
+        transport: transport
+      )
       bot_lifecycle = UseCases::ManageBotLifecycle.new(bot_lifecycle: hub_gateway)
       lifecycle = Channels::Telegram::LifecycleController.new(
         bot_lifecycle: bot_lifecycle
@@ -28,6 +32,8 @@ module PrismBot
         default_voice_profile: configuration.default_voice_profile,
         dispatch_policy: configuration.dispatch_policy,
         message_sender: message_sender,
+        ephemeral_message_sender: ephemeral_sender,
+        voice_sender: ephemeral_sender,
         list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
         publish_publication: UseCases::PublishPublication.new(
           publication_publisher: hub_gateway

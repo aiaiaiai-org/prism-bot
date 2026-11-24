@@ -172,6 +172,48 @@ module PrismBotTestSupport
     end
   end
 
+  class FakeEphemeralSender
+    include PrismBot::Ports::EphemeralMessageSender
+    include PrismBot::Ports::VoiceSender
+
+    attr_reader :sent, :edits, :voices
+
+    def initialize
+      @sent = []
+      @edits = []
+      @voices = []
+    end
+
+    def send_ephemeral_message(target:, text:, reply_markup: nil)
+      @sent << {target: target, text: text, reply_markup: reply_markup}
+      PrismBot::Domain::EphemeralMessageRef.new(
+        chat_id: target.chat_id,
+        receiver_user_id: target.receiver_user_id,
+        ephemeral_message_id: @sent.length
+      )
+    end
+
+    def edit_ephemeral_message(ref:, text:, reply_markup: nil)
+      @edits << {ref: ref, text: text, reply_markup: reply_markup}
+      nil
+    end
+
+    def send_ephemeral_voice(target:, clip:, caption:)
+      @voices << {target: target, clip: clip, caption: caption}
+      ref = PrismBot::Domain::EphemeralMessageRef.new(
+        chat_id: target.chat_id,
+        receiver_user_id: target.receiver_user_id,
+        ephemeral_message_id: 900 + @voices.length
+      )
+      PrismBot::Domain::VoiceReceipt.new(file_id: "voice-file", ephemeral_ref: ref)
+    end
+
+    def send_public_voice(chat_id:, clip:, caption:, message_thread_id: nil)
+      @voices << {chat_id: chat_id, message_thread_id: message_thread_id, clip: clip, caption: caption}
+      PrismBot::Domain::VoiceReceipt.new(file_id: "voice-file", message_id: 700 + @voices.length)
+    end
+  end
+
   class FakeTransport
     attr_reader :calls
 
@@ -205,6 +247,11 @@ module PrismBotTestSupport
   end
 
   module_function
+
+  # The smallest bytes that look like an Ogg/Opus voice: an Ogg page header and an Opus head.
+  def ogg_opus(extra: "")
+    "OggS".b + ("\x00" * 24).b + "OpusHead".b + extra.b
+  end
 
   def telegram_update(text: "/help", update_id: 42, chat_id: -1001, user_id: 7)
     PrismBot::Channels::Telegram::Update.new(

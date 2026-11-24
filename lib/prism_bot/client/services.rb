@@ -9,6 +9,8 @@ module PrismBot
         :default_voice_profile,
         :dispatch_policy,
         :message_sender,
+        :ephemeral_message_sender,
+        :voice_sender,
         :list_channels,
         :publish_publication,
         :bot_lifecycle
@@ -20,6 +22,8 @@ module PrismBot
         default_voice_profile:,
         dispatch_policy:,
         message_sender:,
+        ephemeral_message_sender:,
+        voice_sender:,
         list_channels:,
         publish_publication:,
         bot_lifecycle:
@@ -30,6 +34,8 @@ module PrismBot
         @default_voice_profile = optional_string(default_voice_profile)
         @dispatch_policy = immutable_string(dispatch_policy)
         @message_sender = service(message_sender, :send_message)
+        @ephemeral_message_sender = capabilities(ephemeral_message_sender, %i[send_ephemeral_message edit_ephemeral_message])
+        @voice_sender = capabilities(voice_sender, %i[send_ephemeral_voice send_public_voice])
         @list_channels = service(list_channels, :call)
         @publish_publication = service(publish_publication, :call)
         @bot_lifecycle = lifecycle_service(bot_lifecycle)
@@ -50,6 +56,12 @@ module PrismBot
         return value if value.respond_to?(method)
 
         raise ArgumentError, "client service must respond to #{method}"
+      end
+
+      def capabilities(value, methods)
+        return value if methods.all? { value.respond_to?(_1) }
+
+        raise ArgumentError, "client service must respond to #{methods.join(", ")}"
       end
 
       def lifecycle_service(value)

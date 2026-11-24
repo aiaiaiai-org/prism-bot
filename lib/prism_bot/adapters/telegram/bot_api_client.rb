@@ -6,19 +6,13 @@ module PrismBot
       class BotApiClient
         include Ports::MessageSender
         include Ports::OutboundDelivery
+        include ApiSupport
 
         MAX_MESSAGE_CHARACTERS = 4_096
         MAX_BUTTON_CHARACTERS = 64
 
         def initialize(token:, transport:)
-          if !token.is_a?(String) || token.empty?
-            raise ConfigurationError.new(
-              "bot.telegram.token.invalid",
-              "PRISM_BOT_TELEGRAM_TOKEN must not be empty"
-            )
-          end
-
-          @endpoint = "https://api.telegram.org/bot#{token}/sendMessage".freeze
+          @endpoint = api_url(token, "sendMessage")
           @transport = transport
         end
 
@@ -87,37 +81,6 @@ module PrismBot
           end
           result["link_preview_options"] = {"is_disabled" => true} if disable_link_preview
           result
-        end
-
-        def parse_response(body)
-          value = JSON.parse(body)
-          return value if value.is_a?(Hash)
-
-          raise MessageDeliveryError.new(
-            "bot.telegram.response.invalid",
-            "Telegram returned an invalid response"
-          )
-        rescue JSON::ParserError
-          raise MessageDeliveryError.new(
-            "bot.telegram.response.invalid",
-            "Telegram returned an invalid response"
-          )
-        end
-
-        def raise_delivery_error(status, value)
-          retry_after = value.dig("parameters", "retry_after") if value["parameters"].is_a?(Hash)
-          if status == 429 && retry_after.is_a?(Integer) && retry_after.positive?
-            raise DeliveryRateLimited.new(
-              "bot.telegram.rate_limited",
-              "Telegram rate limited delivery",
-              retry_after_seconds: retry_after
-            )
-          end
-
-          raise MessageDeliveryError.new(
-            "bot.telegram.send_failed",
-            "Telegram rejected the response message"
-          )
         end
 
         def provider_message_id(value)
