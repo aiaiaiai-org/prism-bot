@@ -215,6 +215,25 @@ module PrismBotTestSupport
     end
   end
 
+  class FakeChatMemberLookup
+    include PrismBot::Ports::ChatMemberLookup
+
+    def initialize(statuses: {}, own: "administrator")
+      @statuses = statuses
+      @own = own
+    end
+
+    def chat_membership(chat_id:, user_id:)
+      PrismBot::Domain::ChatMembership.new(
+        chat_id: chat_id, user_id: user_id, status: @statuses.fetch(user_id, "member")
+      )
+    end
+
+    def own_membership(chat_id:)
+      PrismBot::Domain::ChatMembership.new(chat_id: chat_id, user_id: 1, status: @own)
+    end
+  end
+
   class FakeCallbackAnswerer
     include PrismBot::Ports::CallbackAnswerer
 

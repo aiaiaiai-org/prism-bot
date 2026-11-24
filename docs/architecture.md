@@ -237,4 +237,20 @@ ephemeral message, still need a live check.)
 - The bot still has to declare a command with `is_ephemeral` (`setMyCommands`) for Telegram to
   deliver it privately; this repository does not register commands.
 
+## Chat membership
+
+`Services#chat_member_lookup` (`Ports::ChatMemberLookup`, implemented by
+`Adapters::Telegram::ChatMemberClient`) answers who is in a chat and with what standing through
+`getChatMember`: `chat_membership(chat_id:, user_id:)` and `own_membership(chat_id:)`. A
+`Domain::ChatMembership` carries one of `creator`, `administrator`, `member`, `restricted`, `left`,
+`kicked`; `administrator?` is true for the first two, which is the check a product should use before
+letting someone switch a chat feature on.
+
+Telegram guarantees an answer about other people only when this bot is an administrator of the chat.
+The adapter accepts a response only if it names the person asked about with a known status; any other
+answer, a refusal, or an unreachable Telegram raises `MessageDeliveryError`. A caller must treat that
+as "not confirmed", never as an administrator. `own_membership` takes the bot's id from the token
+prefix and raises `ConfigurationError` if the token has none.
+
+
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->
