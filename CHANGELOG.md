@@ -11,6 +11,10 @@
 
 ### Added
 
+- `Ports::ChatMemberLookup` and `Adapters::Telegram::ChatMemberClient` (`getChatMember`), exposed
+  as `Client::Services#chat_member_lookup`, with `Domain::ChatMembership#administrator?`. A lookup
+  Telegram does not confirm raises instead of reporting an administrator. `Client::Services.new`
+  now requires `chat_member_lookup`.
 - Private updates. Ephemeral commands and button presses (`callback_query`) parse into an
   `Update` that is `private?`; its `reply_target` carries an ephemeral target, so handlers and the
   webhook's own notices reply only to the sender and never publicly. `Services#message_sender` is

@@ -94,6 +94,8 @@ class ClientCompositionTest < Minitest::Test
     assert_raises(ArgumentError) { client_services(FakeMessageSender.new, ephemeral: FakeMessageSender.new) }
     assert_raises(ArgumentError) { client_services(FakeMessageSender.new, voice: Object.new) }
     assert_raises(ArgumentError) { client_services(FakeMessageSender.new, ephemeral: nil) }
+    assert_raises(ArgumentError) { client_services(FakeMessageSender.new, members: Object.new) }
+    assert_kind_of FakeChatMemberLookup, services.chat_member_lookup
   end
 
   def test_pending_interaction_is_isolated_by_chat_topic_and_actor
@@ -149,7 +151,8 @@ class ClientCompositionTest < Minitest::Test
     )
   end
 
-  def client_services(sender, ephemeral: FakeEphemeralSender.new, voice: FakeEphemeralSender.new)
+  def client_services(sender, ephemeral: FakeEphemeralSender.new, voice: FakeEphemeralSender.new,
+    members: FakeChatMemberLookup.new)
     PrismBot::Client::Services.new(
       instance_id: "test-client",
       default_channel_ids: ["personal-threads"],
@@ -159,6 +162,7 @@ class ClientCompositionTest < Minitest::Test
       message_sender: sender,
       ephemeral_message_sender: ephemeral,
       voice_sender: voice,
+      chat_member_lookup: members,
       list_channels: ->(**) { [] },
       publish_publication: ->(**) { {} },
       bot_lifecycle: FakeBotLifecycle.new

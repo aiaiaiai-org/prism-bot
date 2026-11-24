@@ -40,6 +40,10 @@ module PrismBot
         message_sender: reply_sender,
         ephemeral_message_sender: ephemeral_sender,
         voice_sender: ephemeral_sender,
+        chat_member_lookup: Adapters::Telegram::ChatMemberClient.new(
+          token: configuration.telegram_token,
+          transport: transport
+        ),
         list_channels: UseCases::ListChannels.new(channel_catalog: hub_gateway),
         publish_publication: UseCases::PublishPublication.new(
           publication_publisher: hub_gateway

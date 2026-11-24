@@ -11,6 +11,7 @@ module PrismBot
         :message_sender,
         :ephemeral_message_sender,
         :voice_sender,
+        :chat_member_lookup,
         :list_channels,
         :publish_publication,
         :bot_lifecycle
@@ -24,6 +25,7 @@ module PrismBot
         message_sender:,
         ephemeral_message_sender:,
         voice_sender:,
+        chat_member_lookup:,
         list_channels:,
         publish_publication:,
         bot_lifecycle:
@@ -36,6 +38,7 @@ module PrismBot
         @message_sender = service(message_sender, :send_message)
         @ephemeral_message_sender = capabilities(ephemeral_message_sender, %i[send_ephemeral_message edit_ephemeral_message])
         @voice_sender = capabilities(voice_sender, %i[send_ephemeral_voice send_public_voice])
+        @chat_member_lookup = capabilities(chat_member_lookup, %i[chat_membership own_membership])
         @list_channels = service(list_channels, :call)
         @publish_publication = service(publish_publication, :call)
         @bot_lifecycle = lifecycle_service(bot_lifecycle)
