@@ -4,14 +4,18 @@ module PrismBot
   module Channels
     module Telegram
       class InteractionRouter
-        def initialize(command_router:, state_handlers:, state_store:, instance_id:)
+        def initialize(command_router:, state_handlers:, state_store:, instance_id:, callback_router: CallbackRouter.new)
           @command_router = command_router
+          @callback_router = callback_router
           @state_handlers = normalize_handlers(state_handlers)
           @state_store = state_store
           @instance_id = String(instance_id).dup.freeze
         end
 
         def call(update)
+          # A button press is routed by its own data; it never reads or changes pending text state.
+          return @callback_router.call(update) if update.callback
+
           key = interaction_key(update)
           result = if Command.parse(update.text)
             @command_router.call(update)

@@ -206,8 +206,35 @@ Rules the adapter enforces:
   user-confirmed share; a missing target can never turn a private voice public.
 - **No content in errors.** Telegram's error text is not copied into exceptions.
 
-Callback queries must still be answered with `answerCallbackQuery` even when the reply is
-ephemeral. How incoming ephemeral commands and callbacks are parsed is an inbound concern outside
-these ports. Live Telegram verification of the response fields is still required before any deploy.
+Live Telegram verification of the response fields is still required before any deploy.
+
+### Private updates
+
+An incoming update is **private** when it is an ephemeral command or a button press. The parser
+marks a message private when it has `ephemeral_message_id`, `receiver_user` or `message_id` `0`;
+a marker without a positive `ephemeral_message_id` raises `bot.telegram.ephemeral.invalid` instead
+of being read as a public message. (The Bot API reference describes these fields on `Message` but
+does not show an incoming ephemeral update, so this reading, and the topic of a press on an
+ephemeral message, still need a live check.)
+
+- `Update#reply_target` of a private update carries an `ephemeral:` target (`reply_to_ephemeral`
+  for a command, `reply_to_callback` for a press). Every handler already answers with
+  `send_message(**update.reply_target, ...)`, so each of them, and the webhook's own error and
+  lifecycle notices, now reply privately.
+- Handlers receive `Services#message_sender`, a `PrivateReplySender`: no target means a public
+  reply, a target means `send_ephemeral_message`. A private reply that fails raises. It is never
+  re-sent publicly. The plain `BotApiClient` refuses an `ephemeral:` argument rather than posting it.
+- A private update's text is not group content. Products that record group messages must skip
+  updates where `private?` is true.
+- A button press is a `callback_query` on a message in a group, supergroup or private chat. It is
+  routed to `Composition#callback_handlers` by the part of `callback_data` before the first `:`
+  (up to 64 bytes; the payload is untrusted). An unregistered route is ignored without output.
+  A press never reads or changes pending text state.
+- `WebhookApp` answers every press with `answerCallbackQuery` after handling it, also when it was
+  refused or failed, so the button's progress bar clears. Answering last keeps `callback_query_id`
+  usable for a private reply within Telegram's 15-second window.
+- Presses on inline-mode or inaccessible messages, in channels, by bots, or without data are ignored.
+- The bot still has to declare a command with `is_ephemeral` (`setMyCommands`) for Telegram to
+  deliver it privately; this repository does not register commands.
 
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

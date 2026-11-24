@@ -43,6 +43,22 @@ module PrismBot
           update.surface_context
         end
 
+        def callback
+          update.callback
+        end
+
+        def ephemeral_message_id
+          update.ephemeral_message_id
+        end
+
+        def private?
+          update.private?
+        end
+
+        def source_ephemeral_ref
+          update.source_ephemeral_ref
+        end
+
         def reply_target
           update.reply_target
         end
