@@ -274,7 +274,6 @@ that explicitly opted in, with disclosure, and must drop it when they opt out. N
 observed: the Bot API does not deliver one for ordinary group messages.
 
 
-<!-- © 2026 aiaiaiai · aiaiaiai.org -->
 
 ## Open commands
 
@@ -286,3 +285,5 @@ before that still applies: the verified webhook secret, the allowed-chat policy,
 channel posts. The handler decides what the person may do (for example from the chat's own member status);
 open commands never reach Hub-backed capabilities such as publishing. An open `/start` replaces onboarding for
 that client.
+
+<!-- © 2026 aiaiaiai · aiaiaiai.org -->
