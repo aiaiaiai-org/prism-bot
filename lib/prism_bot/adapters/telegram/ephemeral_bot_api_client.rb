@@ -27,6 +27,7 @@ module PrismBot
           @send_message_url = api_url(token, "sendMessage")
           @send_voice_url = api_url(token, "sendVoice")
           @edit_text_url = api_url(token, "editEphemeralMessageText")
+          @delete_url = api_url(token, "deleteEphemeralMessage")
           @transport = transport
         end
 
@@ -57,6 +58,22 @@ module PrismBot
           return nil if value["result"] == true
 
           raise MessageDeliveryError.new("bot.telegram.ephemeral.unconfirmed", "Telegram did not confirm the edit")
+        end
+
+        def delete_ephemeral_message(ref:)
+          unless ref.is_a?(Domain::EphemeralMessageRef)
+            raise InputError.new("bot.telegram.ephemeral.ref.invalid", "ephemeral message reference is invalid")
+          end
+
+          payload = {
+            "chat_id" => ref.chat_id,
+            "receiver_user_id" => ref.receiver_user_id,
+            "ephemeral_message_id" => ref.ephemeral_message_id
+          }
+          value = post_json(@delete_url, payload, EPHEMERAL_REJECTED)
+          return nil if value["result"] == true
+
+          raise MessageDeliveryError.new("bot.telegram.ephemeral.unconfirmed", "Telegram did not confirm the deletion")
         end
 
         def send_ephemeral_voice(target:, clip:, caption:)

@@ -177,12 +177,13 @@ module PrismBotTestSupport
     include PrismBot::Ports::EphemeralMessageSender
     include PrismBot::Ports::VoiceSender
 
-    attr_reader :sent, :edits, :voices
+    attr_reader :sent, :edits, :voices, :deleted
 
     def initialize
       @sent = []
       @edits = []
       @voices = []
+      @deleted = []
     end
 
     def send_ephemeral_message(target:, text:, reply_markup: nil)
@@ -196,6 +197,11 @@ module PrismBotTestSupport
 
     def edit_ephemeral_message(ref:, text:, reply_markup: nil)
       @edits << {ref: ref, text: text, reply_markup: reply_markup}
+      nil
+    end
+
+    def delete_ephemeral_message(ref:)
+      @deleted << ref
       nil
     end
 
