@@ -151,6 +151,24 @@ class TelegramEphemeralBotApiClientTest < Minitest::Test
     assert_raises(PrismBot::InputError) { client(transport_returning(true)).edit_ephemeral_message(ref: 31, text: "x") }
   end
 
+  def test_delete_addresses_the_message_by_chat_receiver_and_ephemeral_id
+    transport = transport_returning(true)
+    ref = PrismBot::Domain::EphemeralMessageRef.new(chat_id: CHAT, receiver_user_id: RECEIVER, ephemeral_message_id: 31)
+
+    assert_nil client(transport).delete_ephemeral_message(ref: ref)
+
+    assert_equal "https://api.telegram.org/bottest-token/deleteEphemeralMessage", transport.calls.fetch(0).fetch(:url)
+    assert_equal({"chat_id" => CHAT, "receiver_user_id" => RECEIVER, "ephemeral_message_id" => 31}, payload_of(transport))
+  end
+
+  def test_delete_without_confirmation_or_with_a_wrong_reference_fails_and_never_falls_back
+    ref = PrismBot::Domain::EphemeralMessageRef.new(chat_id: CHAT, receiver_user_id: RECEIVER, ephemeral_message_id: 31)
+
+    error = assert_raises(PrismBot::MessageDeliveryError) { client(transport_returning(false)).delete_ephemeral_message(ref: ref) }
+    assert_equal "bot.telegram.ephemeral.unconfirmed", error.code
+    assert_raises(PrismBot::InputError) { client(transport_returning(true)).delete_ephemeral_message(ref: 31) }
+  end
+
   def test_ephemeral_voice_is_uploaded_as_one_multipart_voice_with_ephemeral_parameters
     transport = transport_returning(voice_result)
     receipt = client(transport).send_ephemeral_voice(

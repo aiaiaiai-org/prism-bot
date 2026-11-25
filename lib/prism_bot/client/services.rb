@@ -36,7 +36,7 @@ module PrismBot
         @default_voice_profile = optional_string(default_voice_profile)
         @dispatch_policy = immutable_string(dispatch_policy)
         @message_sender = service(message_sender, :send_message)
-        @ephemeral_message_sender = capabilities(ephemeral_message_sender, %i[send_ephemeral_message edit_ephemeral_message])
+        @ephemeral_message_sender = capabilities(ephemeral_message_sender, %i[send_ephemeral_message edit_ephemeral_message delete_ephemeral_message])
         @voice_sender = capabilities(voice_sender, %i[send_ephemeral_voice send_public_voice])
         @chat_member_lookup = capabilities(chat_member_lookup, %i[chat_membership own_membership])
         @list_channels = service(list_channels, :call)

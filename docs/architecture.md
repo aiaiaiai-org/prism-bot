@@ -169,7 +169,7 @@ command presentation.
 
 `PrismBot::Client::Services` exposes two further ports for products that answer only one person
 inside a group or topic: `ephemeral_message_sender` (`send_ephemeral_message`,
-`edit_ephemeral_message`) and `voice_sender` (`send_ephemeral_voice`, `send_public_voice`). Both
+`edit_ephemeral_message`, `delete_ephemeral_message`) and `voice_sender` (`send_ephemeral_voice`, `send_public_voice`). Both
 are implemented by `Adapters::Telegram::EphemeralBotApiClient`. This layer is transport only: it
 adds no command, collection or product behaviour.
 
@@ -181,6 +181,7 @@ Verified against the [Bot API reference](https://core.telegram.org/bots/api) at 
 |---|---|---|
 | send | `sendMessage` with `ephemeral_message_parameters` | `EphemeralMessageParameters` has `receiver_user_id`, `callback_query_id`, `replace_callback_query_message` |
 | edit | `editEphemeralMessageText` | requires `chat_id`, `receiver_user_id`, `ephemeral_message_id`; `text` 1-4096 characters |
+| delete | `deleteEphemeralMessage` | same three identifiers; returns `true`, anything else is an error. A text message cannot be edited into a voice (`editEphemeralMessageMedia` takes `InputMedia`, which has no voice), and `replace_callback_query_message` must be false for presses on ephemeral messages, so a result is sent and the status deleted |
 | voice | `sendVoice` with `ephemeral_message_parameters` | Ogg/Opus; caption 0-1024 characters; up to 50 MB |
 | command | `BotCommand.is_ephemeral` | declared by the bot; not set by this repository |
 

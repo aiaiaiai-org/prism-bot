@@ -18,6 +18,13 @@ module PrismBot
       def edit_ephemeral_message(ref:, text:, reply_markup: nil)
         raise NotImplementedError
       end
+
+      # Removes the message from the receiver's chat, for example a status that a result replaces.
+      # Returns nil; raises MessageDeliveryError unless Telegram confirms. As with every private
+      # message, the receiver may be offline and not see the removal.
+      def delete_ephemeral_message(ref:)
+        raise NotImplementedError
+      end
     end
   end
 end
