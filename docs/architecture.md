@@ -274,4 +274,16 @@ that explicitly opted in, with disclosure, and must drop it when they opt out. N
 observed: the Bot API does not deliver one for ordinary group messages.
 
 
+
+## Open commands
+
+A client may declare some of its commands **open** (`Composition#open_commands`, each name must have a command
+handler). For an open command the webhook does not look the person up in Hub and does not consult the bot
+lifecycle: `ActorAuthorizer` hands the handler a guest actor (`role: "member"`, `canonical_id:
+"telegram:<user id>"`) that carries no Hub standing, and `LifecycleGate` lets the command through. Everything
+before that still applies: the verified webhook secret, the allowed-chat policy, a real Telegram user, and no
+channel posts. The handler decides what the person may do (for example from the chat's own member status);
+open commands never reach Hub-backed capabilities such as publishing. An open `/start` replaces onboarding for
+that client.
+
 <!-- © 2026 aiaiaiai · aiaiaiai.org -->

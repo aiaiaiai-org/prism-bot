@@ -88,9 +88,12 @@ module PrismBot
         ),
         actor_authorizer: Channels::Telegram::ActorAuthorizer.new(
           resolve_actor: UseCases::ResolveActor.new(actor_resolver: hub_gateway),
-          onboard_actor: UseCases::OnboardActor.new(actor_onboarder: hub_gateway)
+          onboard_actor: UseCases::OnboardActor.new(actor_onboarder: hub_gateway),
+          open_commands: composition.open_commands
         ),
-        lifecycle_gate: Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
+        lifecycle_gate: Channels::Telegram::LifecycleGate.new(
+          lifecycle: lifecycle, open_commands: composition.open_commands
+        ),
         command_router: interaction_router,
         message_sender: reply_sender,
         presenter: composition.presenter,

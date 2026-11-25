@@ -331,7 +331,8 @@ module PrismBotTestSupport
     callback_answerer: nil,
     observation_parser: nil,
     observer: nil,
-    logger: Logger.new(StringIO.new)
+    logger: Logger.new(StringIO.new),
+    open_commands: []
   )
     lifecycle = PrismBot::Channels::Telegram::LifecycleController.new(
       bot_lifecycle: PrismBot::UseCases::ManageBotLifecycle.new(bot_lifecycle: bot_lifecycle)
@@ -348,9 +349,10 @@ module PrismBotTestSupport
         ),
         onboard_actor: PrismBot::UseCases::OnboardActor.new(
           actor_onboarder: actor_onboarder
-        )
+        ),
+        open_commands: open_commands
       ),
-      lifecycle_gate: PrismBot::Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle),
+      lifecycle_gate: PrismBot::Channels::Telegram::LifecycleGate.new(lifecycle: lifecycle, open_commands: open_commands),
       command_router: router,
       message_sender: sender,
       presenter: PrismBot::Channels::Telegram::ResultPresenter.new,

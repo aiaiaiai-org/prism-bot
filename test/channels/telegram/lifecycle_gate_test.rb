@@ -34,12 +34,21 @@ class LifecycleGateTest < Minitest::Test
     assert_empty lifecycle.requests
   end
 
+  def test_open_commands_bypass_the_lifecycle_because_they_have_no_hub_actor
+    lifecycle = FakeBotLifecycle.new(status: "paused")
+    gate = build_gate(lifecycle, open_commands: %w[whisper])
+
+    assert_nil gate.call(telegram_update(text: "/whisper@Bot 5"))
+    assert_empty lifecycle.requests
+    assert gate.call(telegram_update(text: "/publish hi")), "other commands are still gated"
+  end
+
   private
 
-  def build_gate(lifecycle)
+  def build_gate(lifecycle, open_commands: [])
     controller = PrismBot::Channels::Telegram::LifecycleController.new(
       bot_lifecycle: PrismBot::UseCases::ManageBotLifecycle.new(bot_lifecycle: lifecycle)
     )
-    PrismBot::Channels::Telegram::LifecycleGate.new(lifecycle: controller)
+    PrismBot::Channels::Telegram::LifecycleGate.new(lifecycle: controller, open_commands: open_commands)
   end
 end

@@ -100,6 +100,21 @@ class WebhookPrivateTest < Minitest::Test
     assert_empty @answerer.answered
   end
 
+  def test_an_open_command_reaches_the_router_for_a_person_hub_does_not_know_and_other_commands_do_not
+    resolver = PrismBotTestSupport::FakeActorResolver.new(denied_subject_ids: [7])
+    open = RecordingRouter.new
+    assert_equal 200, post(ephemeral_command_payload(text: "/whisper"), router: open, actor_resolver: resolver,
+      open_commands: %w[whisper])
+    assert_equal 1, open.updates.length
+    assert_equal "member", open.updates.fetch(0).actor.role
+    assert_empty resolver.requests
+
+    closed = RecordingRouter.new
+    assert_equal 200, post(ephemeral_command_payload(text: "/publish hi"), router: closed, actor_resolver: resolver,
+      open_commands: %w[whisper])
+    assert_empty closed.updates
+  end
+
   def test_a_bad_secret_answers_nothing
     app = webhook_app(router: RecordingRouter.new, callback_answerer: @answerer)
     status, = app.call(webhook_environment(callback_payload, secret: "wrong"))

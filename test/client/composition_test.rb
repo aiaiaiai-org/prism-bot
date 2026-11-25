@@ -137,6 +137,19 @@ class ClientCompositionTest < Minitest::Test
     assert_includes message.fetch("text"), "Публічний ID: 0x0sky"
   end
 
+  def test_open_commands_must_have_handlers_and_are_carried_through_with
+    sender = FakeMessageSender.new
+    composition = PrismBot::Client::Default.new.call(client_services(sender))
+
+    assert_empty composition.open_commands
+    assert_raises(ArgumentError) { composition.with(open_commands: ["nothing"]) }
+    opened = composition.with(command_handlers: {"whisper" => BeginPost.new(sender: sender)}, open_commands: ["Whisper"])
+    assert_equal ["whisper"], opened.open_commands
+    again = opened.with(command_handlers: {"stop2" => BeginPost.new(sender: sender)}, open_commands: %w[whisper stop2])
+    assert_equal %w[whisper stop2], again.open_commands
+    assert_equal ["whisper"], opened.with.open_commands
+  end
+
   private
 
   def scoped_update(text:, chat_id: -1001, thread_id: 13, actor_id: "0x0sky")
