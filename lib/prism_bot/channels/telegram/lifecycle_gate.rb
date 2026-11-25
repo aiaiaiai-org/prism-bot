@@ -6,13 +6,15 @@ module PrismBot
       class LifecycleGate
         BYPASS_COMMANDS = %w[start help context status stop resume].freeze
 
-        def initialize(lifecycle:)
+        # Open commands (see ActorAuthorizer) belong to no Hub actor, so there is no bot lifecycle to consult.
+        def initialize(lifecycle:, open_commands: [])
           @lifecycle = lifecycle
+          @open_commands = open_commands.map { String(_1).downcase }.freeze
         end
 
         def call(update)
           command = Command.parse(update.text)
-          return nil if command && BYPASS_COMMANDS.include?(command.name)
+          return nil if command && (BYPASS_COMMANDS.include?(command.name) || @open_commands.include?(command.name))
 
           state = @lifecycle.status(update)
           state.active? ? nil : state
